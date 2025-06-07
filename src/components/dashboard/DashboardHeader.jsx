@@ -5,8 +5,8 @@ const DashboardHeader = () => {
     <div className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Good morning, Quentin</h1>
-          <p className="text-gray-500">You have 12 tasks to do today</p>
+          <h1 className="text-2xl font-bold text-gray-900">Bonjour, Quentin</h1>
+          <p className="text-gray-500">Vous avez 5 tâches à accomplir aujourd'hui</p>
         </div>
         
         <div className="flex items-center">

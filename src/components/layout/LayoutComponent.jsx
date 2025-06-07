@@ -4,6 +4,7 @@ import DashboardHeader from '../dashboard/DashboardHeader';
 import KnowledgeBase from '../dashboard/KnowledgeBase';
 import StatisticCard from '../dashboard/StatisticCard';
 import { Routes, Route } from 'react-router-dom';
+import SuppliersPage from './SuppliersPage'; // Nouveau composant pour les fournisseurs
 
 const LayoutComponent = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -11,7 +12,10 @@ const LayoutComponent = () => {
   return (
     <div className="flex h-screen w-screen bg-gray-100 overflow-hidden">
       {/* Barre de navigation latérale */}
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+      />
       
       {/* Contenu principal */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -34,13 +38,15 @@ const LayoutComponent = () => {
               </div>
             } />
             
+            {/* Page des fournisseurs */}
+            <Route path="/suppliers" element={<SuppliersPage />} />
+            
             {/* Ajoutez d'autres routes ici */}
-            <Route path="/suppliers" element={<div>List of Suppliers</div>} />
-            <Route path="/users" element={<div> List ofUsers</div>} />
-            <Route path="/subscribers" element={<div>Subscribers Page</div>} />
-            <Route path="/kits" element={<div>Kits Page</div>} />
-            <Route path="/map" element={<div>Map Page</div>} />
-            <Route path="/roles" element={<div>Roles Page</div>} />
+            <Route path="/users" element={<div>Liste des Utilisateurs</div>} />
+            <Route path="/subscribers" element={<div>Liste des Abonnés</div>} />
+            <Route path="/kits" element={<div>Liste des Kits</div>} />
+            <Route path="/map" element={<div>Carte</div>} />
+            <Route path="/roles" element={<div>Rôles</div>} />
           </Routes>
         </div>
       </div>

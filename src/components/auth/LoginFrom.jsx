@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import loginImage from '../../assets/images/login.png';
-
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Simulation de connexion réussie
     console.log({ email, password });
+    
+    // Redirection vers le dashboard après connexion
+    navigate('/dashboard');
   };
 
   return (
@@ -96,9 +101,12 @@ const LoginForm = () => {
             <div className="mt-8 text-center">
               <p className="text-sm text-gray-400">
                 Don't have an account?{' '}
-                <Link to="/signup" className="font-medium text-indigo-400 hover:text-indigo-300">
+                <button 
+                  onClick={() => navigate('/signup')} 
+                  className="font-medium text-indigo-400 hover:text-indigo-300"
+                >
                   Sign up
-                </Link>
+                </button>
               </p>
             </div>
           </div>

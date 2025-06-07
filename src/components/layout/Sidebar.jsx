@@ -3,45 +3,44 @@ import UserProfile from './UserProfile';
 import { 
   HiHome, HiShoppingBag, HiTruck, HiUserGroup, HiOfficeBuilding 
 } from 'react-icons/hi';
-import { useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
-  const navigate = useNavigate();
   const menuItems = [
     { 
       label: "Dashboard", 
       icon: <HiHome className="text-xl" />,
-      action: () => navigate('/dashboard') 
-    },
+      path: "/dashboard" 
+    }, 
     { 
       label: "Suppliers", 
       icon: <HiUserGroup className="text-xl" />,
-      action: () => navigate('/dashboard/suppliers') 
+      path: "/dashboard/suppliers" 
     },
     { 
       label: "Users", 
       icon: <HiUserGroup className="text-xl" />,
-      action: () => navigate('/dashboard/users') 
+      path: "/dashboard/users" // Modifié: chemin absolu
     },
     { 
-      label: "Subscribers", 
+      label: "Abonnés", 
       icon: <HiUserGroup className="text-xl" />,
-      action: () => navigate('/dashboard/subscribers') 
+      path: "/dashboard/subscribers" // Modifié: chemin absolu
     },
     { 
       label: "Kits", 
       icon: <HiShoppingBag className="text-xl" />,
-      action: () => navigate('/dashboard/kits') 
+      path: "/dashboard/kits" // Modifié: chemin absolu
     },
     { 
       label: "Map", 
       icon: <HiTruck className="text-xl" />,
-      action: () => navigate('/dashboard/map') 
+      path: "/dashboard/map" // Modifié: chemin absolu
     },
     { 
-      label: "Roles", 
+      label: "Rôles", 
       icon: <HiOfficeBuilding className="text-xl" />,
-      action: () => navigate('/dashboard/roles') 
+      path: "/dashboard/roles" // Modifié: chemin absolu
     },
   ];
 
@@ -69,12 +68,15 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       {/* Items du menu */}
       <nav className="flex-1 overflow-y-auto py-2">
         {menuItems.map((item, index) => (
-          <button
+          <NavLink 
             key={index}
-            onClick={item.action}
-            className={`w-full py-3 px-5 flex items-center text-left
-              hover:bg-gray-800 transition-colors duration-200
-              ${isOpen ? 'justify-start' : 'justify-center'}`}
+            to={item.path}
+            className={({ isActive }) => 
+              `flex items-center w-full py-3 px-5 text-left
+               hover:bg-gray-800 transition-colors duration-200
+               ${isOpen ? 'justify-start' : 'justify-center'}
+               ${isActive ? 'bg-gray-800 border-l-4 border-indigo-500' : ''}`
+            }
           >
             <div className="flex-shrink-0 text-gray-300">
               {item.icon}
@@ -86,7 +88,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             `}>
               {item.label}
             </span>
-          </button>
+          </NavLink>
         ))}
       </nav>
       
