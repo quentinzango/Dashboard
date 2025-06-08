@@ -23,7 +23,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       path: "/dashboard/users" // Modifié: chemin absolu
     },
     { 
-      label: "Abonnés", 
+      label: "Subscribers", 
       icon: <HiUserGroup className="text-xl" />,
       path: "/dashboard/subscribers" // Modifié: chemin absolu
     },
