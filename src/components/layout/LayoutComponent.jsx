@@ -7,6 +7,7 @@ import { Routes, Route } from 'react-router-dom';
 import SuppliersPage from './SuppliersPage';
 import SubscribersPage from './SubscribersPage';
 import UsersPage from './UsersPage';
+import SuperAdministratorsPage from './SuperAdministratorsPage';
 
 const LayoutComponent = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -101,10 +102,11 @@ const LayoutComponent = () => {
             <Route path="/suppliers" element={<SuppliersPage />} />
             <Route path="/subscribers" element={<SubscribersPage />} />
             <Route path="/users" element={<UsersPage />} />
+            <Route path="/SuperAdministrators" element={<SuperAdministratorsPage />} />
             <Route path="/users" element={<div>Liste des Utilisateurs</div>} />
-            <Route path="/kits" element={<div>Liste des Kits</div>} />
+            <Route path="/Administrators" element={<div>List of administrators</div>} />
             <Route path="/map" element={<div>Carte</div>} />
-            <Route path="/roles" element={<div>Rôles</div>} />
+            <Route path="/SuperAdministrators" element={<div>List of super administrators</div>} />
           </Routes>
         </div>
       </div>

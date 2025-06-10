@@ -28,9 +28,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       path: "/dashboard/subscribers" // Modifié: chemin absolu
     },
     { 
-      label: "Kits", 
+      label: "Administrators", 
       icon: <HiShoppingBag className="text-xl" />,
-      path: "/dashboard/kits" // Modifié: chemin absolu
+      path: "/dashboard/Administrators" // Modifié: chemin absolu
     },
     { 
       label: "Map", 
@@ -38,9 +38,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       path: "/dashboard/map" // Modifié: chemin absolu
     },
     { 
-      label: "Rôles", 
+      label: "SuperAdministrators", 
       icon: <HiOfficeBuilding className="text-xl" />,
-      path: "/dashboard/roles" // Modifié: chemin absolu
+      path: "/dashboard/SuperAdministrators" // Modifié: chemin absolu
     },
   ];
 
