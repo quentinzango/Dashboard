@@ -1,202 +1,379 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FiSearch } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
 const SubscribersPage = () => {
   const navigate = useNavigate();
   const [subscribers, setSubscribers] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const subscribersPerPage = 5;
+  const [isAdding, setIsAdding] = useState(false);
+  const [newSub, setNewSub] = useState({
+    utilisateur: '',
+    fournisseur_energie: '',
+    ville: ''
+  });
+  const [error, setError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const perPage = 5;
+
+  // 1) Fetch de toutes les données
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const token = localStorage.getItem('accessToken');
+    if (!token) return navigate('/login');
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    try {
+      const [resSubs, resUsers, resSupp, resCities] = await Promise.all([
+        fetch('http://localhost:8000/api/v1/abonnes/', { headers }),
+        fetch('http://localhost:8000/api/v1/auth/users/', { headers }),
+        fetch('http://localhost:8000/api/v1/fournisseurs/', { headers }),
+        fetch('http://localhost:8000/api/v1/villes/', { headers })
+      ]);
+
+      if (resSubs.status === 401) {
+        localStorage.removeItem('accessToken');
+        return navigate('/login');
+      }
+      if (!resSubs.ok) throw new Error('Impossible de charger les abonnés');
+
+      const [dataSubs, dataUsers, dataSupp, dataCities] = await Promise.all([
+        resSubs.json(),
+        resUsers.json(),
+        resSupp.json(),
+        resCities.json(),
+      ]);
+
+      setUsers(dataUsers);
+      setSuppliers(dataSupp);
+      setCities(dataCities);
+
+      // Créer un mapping des villes par ID pour une recherche rapide
+      const cityMap = {};
+      dataCities.forEach(city => {
+        cityMap[city.id] = city.nom;
+      });
+
+      // Formatage des abonnés avec résolution du nom de ville
+      setSubscribers(dataSubs.map(a => ({
+        id: a.id,
+        user: a.utilisateur?.email || '—',
+        supplier: a.fournisseur_energie?.nom || '—',
+        city: a.ville ? cityMap[a.ville] || '—' : '—'
+      })));
+    } catch (e) {
+      console.error(e);
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Remplacez ceci par votre appel API réel
-        // const response = await fetch('votre-endpoint-api');
-        // const data = await response.json();
-        // setSubscribers(data);
-        
-        // Pour l'instant, on initialise avec un tableau vide
-        setSubscribers([]);
-      } catch (error) {
-        console.error("Erreur lors du chargement des abonnés:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-  }, []);
+  }, [fetchData]);
 
-  // Filtrer les abonnés basé sur la recherche
-  const filteredSubscribers = subscribers.filter(subscriber => 
-    (subscriber.user && subscriber.user.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (subscriber.supplier && subscriber.supplier.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (subscriber.city && subscriber.city.toLowerCase().includes(searchTerm.toLowerCase()))
+  // 2) Filtrage et pagination
+  const filtered = subscribers.filter(s =>
+    (s.user || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (s.supplier || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (s.city || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const current = filtered.slice(
+    (currentPage - 1) * perPage,
+    currentPage * perPage
   );
 
-  // Pagination
-  const indexOfLastSubscriber = currentPage * subscribersPerPage;
-  const indexOfFirstSubscriber = indexOfLastSubscriber - subscribersPerPage;
-  const currentSubscribers = filteredSubscribers.slice(indexOfFirstSubscriber, indexOfLastSubscriber);
-  const totalPages = Math.ceil(filteredSubscribers.length / subscribersPerPage);
-
-  const handleAddSubscriber = () => {
-    navigate('/subscribers/add');
+  // 3) Suppression
+  const handleDelete = async id => {
+    if (!window.confirm('Supprimer cet abonné ?')) return;
+    const token = localStorage.getItem('accessToken');
+    try {
+      const res = await fetch(`http://localhost:8000/api/v1/abonnes/${id}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error();
+      await fetchData();
+    } catch {
+      setError('Erreur lors de la suppression');
+    }
   };
 
-  const handleEdit = (id) => {
-    navigate(`/subscribers/edit/${id}`);
+  // 4) Toggle formulaire
+  const handleAddToggle = () => {
+    setError(null);
+    setNewSub({ utilisateur: '', fournisseur_energie: '', ville: '' });
+    setIsAdding(true);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet abonné ?')) {
-      // À remplacer par un appel API de suppression
-      setSubscribers(subscribers.filter(subscriber => subscriber.id !== id));
+  // 5) Bind form
+  const handleNewChange = e => {
+    const { name, value } = e.target;
+    setNewSub(ns => ({ ...ns, [name]: value }));
+  };
+
+  // 6) Soumission ajout avec correction du problème 400
+  const handleAddSubmit = async e => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+    
+    const { utilisateur, fournisseur_energie, ville } = newSub;
+    
+    // Validation des champs requis (ville est optionnelle)
+    if (!utilisateur || !fournisseur_energie) {
+      setIsSubmitting(false);
+      return setError('Les champs utilisateur et fournisseur sont requis');
+    }
+
+    const token = localStorage.getItem('accessToken');
+    try {
+      // Formatage des données pour l'API
+      const payload = {
+        utilisateur: parseInt(utilisateur, 10),
+        fournisseur_energie: parseInt(fournisseur_energie, 10),
+      };
+      
+      // Ajout optionnel de la ville
+      if (ville) {
+        payload.ville = parseInt(ville, 10);
+      }
+
+      const res = await fetch('http://localhost:8000/api/v1/abonnes/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      // Gestion des erreurs de l'API
+      if (!res.ok) {
+        const errorData = await res.json();
+        let errorMessage = 'Échec de la création';
+        
+        // Extraction des messages d'erreur détaillés
+        if (errorData) {
+          if (errorData.non_field_errors) {
+            errorMessage = errorData.non_field_errors.join(', ');
+          } else {
+            // Si les erreurs sont dans un objet, on les extrait
+            errorMessage = Object.values(errorData).flat().join(', ');
+          }
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      // Rafraîchissement des données
+      await fetchData();
+      setIsAdding(false);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">List of Subscribers</h1>
-          <button 
-            onClick={handleAddSubscriber}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Add a Subscriber
-          </button>
-        </div>
-        
-        <div className="mt-6 flex justify-between items-center">
-          <div className="relative w-1/3">
-            <input
-              type="text"
-              placeholder="Search by user, supplier or city"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-              </svg>
+    <div className="max-w-7xl mx-auto px-4 py-6">
+      {/* En-tête */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">List of Subscribers</h1>
+        <button
+          onClick={handleAddToggle}
+          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center"
+          disabled={isSubmitting}
+        >
+          + Add a Subscriber
+        </button>
+      </div>
+
+      {/* Formulaire d'ajout inline */}
+      {isAdding && (
+        <form onSubmit={handleAddSubmit} className="mb-6 p-4 bg-gray-50 rounded">
+          {error && <div className="mb-2 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Utilisateur *</label>
+              <select
+                name="utilisateur"
+                value={newSub.utilisateur}
+                onChange={handleNewChange}
+                className="w-full border px-3 py-2 rounded"
+                required
+                disabled={isSubmitting}
+              >
+                <option value="">Sélectionnez un utilisateur</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.email}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fournisseur *</label>
+              <select
+                name="fournisseur_energie"
+                value={newSub.fournisseur_energie}
+                onChange={handleNewChange}
+                className="w-full border px-3 py-2 rounded"
+                required
+                disabled={isSubmitting}
+              >
+                <option value="">Sélectionnez un fournisseur</option>
+                {suppliers.map(s => (
+                  <option key={s.id} value={s.id}>{s.nom}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ville (Optionnel)</label>
+              <select
+                name="ville"
+                value={newSub.ville}
+                onChange={handleNewChange}
+                className="w-full border px-3 py-2 rounded"
+                disabled={isSubmitting}
+              >
+                <option value="">Sélectionnez une ville</option>
+                {cities.map(c => (
+                  <option key={c.id} value={c.id}>{c.nom}</option>
+                ))}
+              </select>
             </div>
           </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <h3 className="text-gray-500">Total Subscribers</h3>
-            <p className="text-2xl font-bold">{filteredSubscribers.length}</p>
+          <div className="mt-4 space-x-3">
+            <button 
+              type="submit" 
+              className={`px-4 py-2 text-white rounded ${
+                isSubmitting ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
+              }`}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Création en cours...' : 'Créer'}
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setIsAdding(false)} 
+              className="px-4 py-2 bg-gray-300 rounded"
+              disabled={isSubmitting}
+            >
+              Annuler
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Recherche & compteur */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="relative w-1/3">
+          <input
+            type="text"
+            placeholder="Search by user, supplier or city"
+            className="w-full px-4 py-2 pl-10 border rounded focus:ring-2 focus:ring-indigo-500"
+            value={searchTerm}
+            onChange={e => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <FiSearch className="h-5 w-5 text-gray-400" />
           </div>
         </div>
+        <div className="bg-white p-4 rounded shadow">
+          <h3 className="text-gray-500">Total Subscribers</h3>
+          {/* Afficher le nombre réel d'abonnés */}
+          <p className="text-2xl font-bold">{subscribers.length}</p>
+        </div>
       </div>
-      
+
+      {/* Tableau ou loader */}
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+          <div className="animate-spin w-12 h-12 border-t-2 border-b-2 border-indigo-500 rounded-full" />
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-white rounded-lg shadow overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  {['User', 'Supplier', 'City', 'Actions'].map(c => (
+                    <th key={c} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      {c}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {currentSubscribers.map((subscriber) => (
-                  <tr key={subscriber.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{subscriber.user}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{subscriber.supplier}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{subscriber.city}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {current.map(s => (
+                  <tr key={s.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">{s.user}</td>
+                    <td className="px-6 py-4">{s.supplier}</td>
+                    <td className="px-6 py-4">{s.city}</td>
+                    <td className="px-6 py-4 space-x-3">
                       <button 
-                        onClick={() => handleEdit(subscriber.id)} 
-                        className="text-indigo-600 hover:text-indigo-900 mr-3"
+                        onClick={() => navigate(`/subscribers/edit/${s.id}`)} 
+                        className="text-indigo-600 hover:underline"
                       >
                         Edit
                       </button>
                       <button 
-                        onClick={() => handleDelete(subscriber.id)} 
-                        className="text-red-600 hover:text-red-900"
+                        onClick={() => handleDelete(s.id)} 
+                        className="text-red-600 hover:underline"
                       >
                         Remove
                       </button>
                     </td>
                   </tr>
                 ))}
+                {current.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No Subscriber Found</td>
+                  </tr>
+                )}
               </tbody>
             </table>
-            
-            {currentSubscribers.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No Subscriber Found</p>
-              </div>
-            )}
           </div>
-          
+
           {/* Pagination */}
-          {filteredSubscribers.length > subscribersPerPage && (
-            <div className="mt-6 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Page <span className="font-medium">{currentPage}</span> on <span className="font-medium">{totalPages}</span>
-              </div>
-              
-              <div className="flex space-x-2">
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center space-x-2 mt-4">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 rounded bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
+              >
+                Previous
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => (
                 <button
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`px-3 py-1 rounded-md ${
-                    currentPage === 1 
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
+                  key={i + 1}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-gray-50'}`}
                 >
-                  Previous
+                  {i + 1}
                 </button>
-                
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 rounded-md ${
-                      currentPage === page
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                
-                <button
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className={`px-3 py-1 rounded-md ${
-                    currentPage === totalPages
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Next
-                </button>
-              </div>
+              ))}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 rounded bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
+              >
+                Next
+              </button>
             </div>
           )}
         </>

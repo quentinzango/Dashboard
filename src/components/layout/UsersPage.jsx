@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+const USERS_STORAGE_KEY = 'usersList';
 
 const UsersPage = () => {
   const navigate = useNavigate();
@@ -7,227 +9,311 @@ const UsersPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newUser, setNewUser] = useState({
+    email: '',
+    password: '',
+    nom: '',
+    numero_telephone: ''
+  });
+  const [error, setError] = useState(null);
   const usersPerPage = 5;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Remplacez ceci par votre appel API réel
-        // const response = await fetch('votre-endpoint-api');
-        // const data = await response.json();
-        // setUsers(data);
-        
-        // Données simulées pour démonstration
-        const mockUsers = [
-          { id: 1, name: 'John Doe', email: 'john@example.com', phone: '+123456789', active: true },
-          { id: 2, name: 'Jane Smith', email: 'jane@example.com', phone: '+987654321', active: false },
-          { id: 3, name: 'Robert Johnson', email: 'robert@example.com', phone: '+112233445', active: true },
-          { id: 4, name: 'Emily Davis', email: 'emily@example.com', phone: '+556677889', active: true },
-          { id: 5, name: 'Michael Wilson', email: 'michael@example.com', phone: '+998877665', active: false },
-        ];
-        
-        setUsers(mockUsers);
-      } catch (error) {
-        console.error("Erreur lors du chargement des utilisateurs:", error);
-      } finally {
-        setLoading(false);
+  // Encapsuler fetchUsers avec useCallback
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) throw new Error('Vous devez vous connecter.');
+
+      const res = await fetch('http://localhost:8000/api/v1/auth/users/', {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        navigate('/login');
+        return;
       }
-    };
+      if (!res.ok) throw new Error('Erreur lors de la récupération des utilisateurs');
 
-    fetchData();
-  }, []);
+      const data = await res.json();
+      setUsers(data);
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(data));
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]);
 
-  // Filtrer les utilisateurs basé sur la recherche
-  const filteredUsers = users.filter(user => 
-    (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (user.phone && user.phone.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Chargement initial : localStorage ou API
+  useEffect(() => {
+    const stored = localStorage.getItem(USERS_STORAGE_KEY);
+    if (stored) {
+      setUsers(JSON.parse(stored));
+      setLoading(false);
+    } else {
+      fetchUsers();
+    }
+  }, [fetchUsers]);
 
-  // Pagination
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  // Supprimer un utilisateur
+  const handleDelete = async (userId) => {
+    if (!window.confirm("Voulez-vous vraiment supprimer cet utilisateur ?")) return;
 
-  const handleAddUser = () => {
-    navigate('/users/add');
-  };
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
 
-  const handleEdit = (id) => {
-    navigate(`/users/edit/${id}`);
-  };
+      const res = await fetch(`http://localhost:8000/api/v1/auth/users/${userId}/`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
-  const handleDelete = (id) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
-      // À remplacer par un appel API de suppression
-      setUsers(users.filter(user => user.id !== id));
+      if (res.ok) {
+        const updatedUsers = users.filter(user => user.id !== userId);
+        setUsers(updatedUsers);
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+      } else if (res.status === 401) {
+        navigate('/login');
+      } else {
+        alert('Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error("Erreur suppression:", error);
+      alert('Erreur lors de la suppression');
     }
   };
 
-  const toggleActiveStatus = (id) => {
-    setUsers(users.map(user => 
-      user.id === id ? { ...user, active: !user.active } : user
-    ));
+  // Ajouter un utilisateur
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) throw new Error('Vous devez vous connecter.');
+
+      const res = await fetch('http://localhost:8000/api/v1/auth/register/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(newUser),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || JSON.stringify(data));
+
+      const createdUser = data.user ?? data;
+      const updatedList = [createdUser, ...users];
+      setUsers(updatedList);
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedList));
+
+      setNewUser({ email: '', password: '', nom: '', numero_telephone: '' });
+      setIsAdding(false);
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    }
   };
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewUser(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Filtrage (sans numero_telephone)
+  const filteredUsers = users.filter(u =>
+    (u.nom && u.nom.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (u.email && u.email.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  // Pagination
+  const indexOfLast = currentPage * usersPerPage;
+  const indexOfFirst = indexOfLast - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirst, indexOfLast);
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">List of Users</h1>
-          <button 
-            onClick={handleAddUser}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Add a User
-          </button>
-        </div>
-        
-        <div className="mt-6 flex justify-between items-center">
-          <div className="relative w-1/3">
-            <input
-              type="text"
-              placeholder="Search by name, email or phone"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow-sm">
+    <div className="max-w-7xl mx-auto px-4 py-6">
+      <h1 className="text-2xl font-bold text-gray-900">List of Users</h1>
+
+      {/* --- Barre de recherche + bouton Ajouter --- */}
+      <div className="flex items-center justify-between mb-4">
+      <div className="relative w-full max-w-sm">
+  <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" >
+      <circle cx="11" cy="11" r="7" />
+      <line x1="16.65" y1="16.65" x2="21" y2="21" />
+    </svg>
+  </span>
+  <input
+    type="text"
+    placeholder="Rechercher un utilisateur..."
+    className="border border-gray-300 rounded-md px-10 py-2 w-full max-w-sm"
+    value={searchTerm}
+    onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+  />
+</div>
+
+        <button
+          onClick={() => setIsAdding(true)}
+          className="ml-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+        >
+          Ajouter un utilisateur
+        </button>
+      </div>
+
+      {/* --- Compteur utilisateurs affichés --- */}
+
+      <div className="bg-white p-4 rounded-lg shadow-sm">
             <h3 className="text-gray-500">Total Users</h3>
             <p className="text-2xl font-bold">{filteredUsers.length}</p>
           </div>
-        </div>
-      </div>
-      
+
+      {/* --- Formulaire d'ajout --- */}
+      {isAdding && (
+        <form onSubmit={handleAddSubmit} className="mb-6 p-4 border border-gray-300 rounded-md bg-gray-50">
+          {error && <div className="mb-2 text-red-600">{error}</div>}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              required
+              name="nom"
+              placeholder="Nom"
+              value={newUser.nom}
+              onChange={handleInputChange}
+              className="border px-3 py-2 rounded-md"
+            />
+            <input
+              required
+              name="email"
+              type="email"
+              placeholder="Email"
+              value={newUser.email}
+              onChange={handleInputChange}
+              className="border px-3 py-2 rounded-md"
+            />
+            <input
+              required
+              name="numero_telephone"
+              placeholder="Téléphone"
+              value={newUser.numero_telephone}
+              onChange={handleInputChange}
+              className="border px-3 py-2 rounded-md"
+            />
+            <input
+              required
+              name="password"
+              type="password"
+              placeholder="Mot de passe"
+              value={newUser.password}
+              onChange={handleInputChange}
+              className="border px-3 py-2 rounded-md"
+            />
+          </div>
+          <div className="mt-4 flex space-x-4">
+            <button
+              type="submit"
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            >
+              Ajouter
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsAdding(false);
+                setNewUser({ email: '', password: '', nom: '', numero_telephone: '' });
+                setError(null);
+              }}
+              className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
+            >
+              Annuler
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* --- Loading & Table des utilisateurs --- */}
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
       ) : (
-        <>
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>{['Nom', 'Email', 'Statut', 'Actions'].map(col => (
+                <th
+                  key={col}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider"
+                >
+                  {col}
+                </th>
+              ))}</tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {currentUsers.map(user => (
+                <tr key={user.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.nom}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap flex items-center">
+                    <input type="checkbox" checked={user.active} readOnly className="h-4 w-4 text-indigo-600 rounded" />
+                    <span className="ml-2 text-sm text-gray-500">{user.active ? 'Actif' : 'Inactif'}</span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <button onClick={() => navigate(`/users/edit/${user.id}`)} className="text-indigo-600 hover:text-indigo-900 mr-3">Modifier</button>
+                    <button onClick={() => handleDelete(user.id)} className="text-red-600 hover:text-red-900">Supprimer</button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {currentUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{user.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{user.phone}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={user.active}
-                          onChange={() => toggleActiveStatus(user.id)}
-                          className="h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500"
-                        />
-                        <span className="ml-2 text-sm text-gray-500">
-                          {user.active ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button 
-                        onClick={() => handleEdit(user.id)} 
-                        className="text-indigo-600 hover:text-indigo-900 mr-3"
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(user.id)} 
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            {currentUsers.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No User Found</p>
-              </div>
-            )}
-          </div>
-          
+              ))}
+            </tbody>
+          </table>
+
           {/* Pagination */}
           {filteredUsers.length > usersPerPage && (
             <div className="mt-6 flex items-center justify-between">
               <div className="text-sm text-gray-700">
-                Page <span className="font-medium">{currentPage}</span> on <span className="font-medium">{totalPages}</span>
+                Page <span className="font-medium">{currentPage}</span> sur <span className="font-medium">{totalPages}</span>
               </div>
-              
               <div className="flex space-x-2">
                 <button
-                  onClick={() => setCurrentPage(currentPage - 1)}
+                  onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
                   disabled={currentPage === 1}
                   className={`px-3 py-1 rounded-md ${
-                    currentPage === 1 
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                    currentPage === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-white text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  Previous
+                  Précédent
                 </button>
-                
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 rounded-md ${
-                      currentPage === page
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                
                 <button
-                  onClick={() => setCurrentPage(currentPage + 1)}
+                  onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
                   disabled={currentPage === totalPages}
                   className={`px-3 py-1 rounded-md ${
                     currentPage === totalPages
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-white text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  Next
+                  Suivant
                 </button>
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

@@ -1,19 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const StatisticCard = ({ 
-  connectedMetersHistory,
-  disconnectedMetersHistory,
-  subscribersHistory,
-  smsHistory
-}) => {
-  const data = [
-    { name: 'Jan', Connectés: 10, 'Hors service': 2, Abonnés: 3, SMS: 1 },
-    { name: 'Feb', Connectés: 12, 'Hors service': 1, Abonnés: 4, SMS: 2 },
-    { name: 'Mar', Connectés: 15, 'Hors service': 5, Abonnés: 15, SMS: 3 },
-    { name: 'Apr', Connectés: 11, 'Hors service': 4, Abonnés: 4, SMS: 4 },
-    // Ajouter plus de données selon l'historique
-  ];
+const StatisticCard = () => {
+  const [chartData, setChartData] = useState([]);
+  
+  // Récupérer les données réelles pour le graphique
+  useEffect(() => {
+    const fetchChartData = async () => {
+      const token = localStorage.getItem('accessToken');
+      try {
+        const response = await fetch('http://localhost:8000/api/v1/statistics/', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch statistics');
+        
+        const data = await response.json();
+        setChartData(data);
+      } catch (error) {
+        console.error('Error fetching statistics:', error);
+      }
+    };
+
+    fetchChartData();
+  }, []);
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
@@ -42,7 +54,7 @@ const StatisticCard = ({
       
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
             <YAxis />

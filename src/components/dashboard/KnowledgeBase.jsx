@@ -1,13 +1,37 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const KnowledgeBase = ({ 
   connectedMeters, 
   disconnectedMeters, 
-  subscribersCount, 
   smsCount,
   selectedMonth,
   onMonthChange
 }) => {
+  const [subscribersCount, setSubscribersCount] = useState(0);
+
+  // Récupérer le nombre réel d'abonnés
+  useEffect(() => {
+    const fetchSubscribersCount = async () => {
+      const token = localStorage.getItem('accessToken');
+      try {
+        const response = await fetch('http://localhost:8000/api/v1/abonnes/', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch subscribers');
+        
+        const data = await response.json();
+        setSubscribersCount(data.length);
+      } catch (error) {
+        console.error('Error fetching subscribers:', error);
+      }
+    };
+
+    fetchSubscribersCount();
+  }, []);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
       {/* Compteurs connectés */}
@@ -45,6 +69,7 @@ const KnowledgeBase = ({
         <div className="flex justify-between items-start">
           <div>
             <h3 className="text-lg font-semibold text-gray-700">Nombre d'abonnés</h3>
+            {/* Afficher le nombre réel d'abonnés */}
             <p className="text-3xl font-bold mt-2">{subscribersCount}</p>
           </div>
           <div className="bg-orange-300 p-2 rounded-lg">

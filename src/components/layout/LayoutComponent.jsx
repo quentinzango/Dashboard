@@ -8,6 +8,7 @@ import SuppliersPage from './SuppliersPage';
 import SubscribersPage from './SubscribersPage';
 import UsersPage from './UsersPage';
 import SuperAdministratorsPage from './SuperAdministratorsPage';
+import AdministratorsPage from './AdministratorsPage';
 
 const LayoutComponent = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -103,6 +104,7 @@ const LayoutComponent = () => {
             <Route path="/subscribers" element={<SubscribersPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/SuperAdministrators" element={<SuperAdministratorsPage />} />
+            <Route path="/Administrators" element={<AdministratorsPage />} />
             <Route path="/users" element={<div>Liste des Utilisateurs</div>} />
             <Route path="/Administrators" element={<div>List of administrators</div>} />
             <Route path="/map" element={<div>Carte</div>} />
