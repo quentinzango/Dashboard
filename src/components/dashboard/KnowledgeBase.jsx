@@ -1,37 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 const KnowledgeBase = ({ 
   connectedMeters, 
   disconnectedMeters, 
+  subscribersCount,
   smsCount,
   selectedMonth,
   onMonthChange
 }) => {
-  const [subscribersCount, setSubscribersCount] = useState(0);
-
-  // Récupérer le nombre réel d'abonnés
-  useEffect(() => {
-    const fetchSubscribersCount = async () => {
-      const token = localStorage.getItem('accessToken');
-      try {
-        const response = await fetch('http://localhost:8000/api/v1/abonnes/', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) throw new Error('Failed to fetch subscribers');
-        
-        const data = await response.json();
-        setSubscribersCount(data.length);
-      } catch (error) {
-        console.error('Error fetching subscribers:', error);
-      }
-    };
-
-    fetchSubscribersCount();
-  }, []);
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
       {/* Compteurs connectés */}
@@ -39,7 +15,10 @@ const KnowledgeBase = ({
         <div className="flex justify-between items-start">
           <div>
             <h3 className="text-lg font-semibold text-gray-700">Compteurs Connectés</h3>
-            <p className="text-3xl font-bold mt-2">{connectedMeters}</p>
+            <p className="text-3xl font-bold mt-2">
+              {connectedMeters}
+              <span className="text-xs ml-1 text-gray-500">en temps réel</span>
+            </p>
           </div>
           <div className="bg-blue-300 p-2 rounded-lg">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -54,7 +33,10 @@ const KnowledgeBase = ({
         <div className="flex justify-between items-start">
           <div>
             <h3 className="text-lg font-semibold text-gray-700">Compteurs Hors service</h3>
-            <p className="text-3xl font-bold mt-2">{disconnectedMeters}</p>
+            <p className="text-3xl font-bold mt-2">
+              {disconnectedMeters}
+              <span className="text-xs ml-1 text-gray-500">en temps réel</span>
+            </p>
           </div>
           <div className="bg-red-300 p-2 rounded-lg">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -69,8 +51,10 @@ const KnowledgeBase = ({
         <div className="flex justify-between items-start">
           <div>
             <h3 className="text-lg font-semibold text-gray-700">Nombre d'abonnés</h3>
-            {/* Afficher le nombre réel d'abonnés */}
-            <p className="text-3xl font-bold mt-2">{subscribersCount}</p>
+            <p className="text-3xl font-bold mt-2">
+              {subscribersCount}
+              <span className="text-xs ml-1 text-gray-500">en temps réel</span>
+            </p>
           </div>
           <div className="bg-orange-300 p-2 rounded-lg">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -85,7 +69,10 @@ const KnowledgeBase = ({
         <div className="flex justify-between items-start">
           <div>
             <h3 className="text-lg font-semibold text-gray-700">Nombre de SMS ({selectedMonth})</h3>
-            <p className="text-3xl font-bold mt-2">{smsCount}</p>
+            <p className="text-3xl font-bold mt-2">
+              {smsCount}
+              <span className="text-xs ml-1 text-gray-500">ce mois-ci</span>
+            </p>
             <div className="mt-2">
               <select 
                 value={selectedMonth}

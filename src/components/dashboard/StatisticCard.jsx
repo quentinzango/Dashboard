@@ -1,97 +1,247 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 const StatisticCard = () => {
-  const [chartData, setChartData] = useState([]);
+  const [chartData, setChartData] = useState({
+    abonnesData: [],
+    disjoncteursData: [],
+    actionsData: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
-  // Récupérer les données réelles pour le graphique
+  // Objectifs maximums pour chaque catégorie
+  const MAX_ABONNES = 10000;
+  const MAX_DISJONCTEURS = 100;
+  const MAX_ACTIONS = 50000;
+  
+  // Couleurs personnalisées pour les camemberts
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+  
   useEffect(() => {
     const fetchChartData = async () => {
       const token = localStorage.getItem('accessToken');
       try {
-        const response = await fetch('http://localhost:8000/api/v1/statistics/', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        // Récupérer les données nécessaires
+        const [abonnesRes, disjoncteursRes, actionsRes] = await Promise.all([
+          fetch('http://localhost:8000/api/v1/abonnes/', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          fetch('http://localhost:8000/api/v1/disjoncteurs/', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          fetch('http://localhost:8000/api/v1/actions/', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        ]);
+
+        // Vérifier les réponses
+        if (!abonnesRes.ok) throw new Error('Échec de la récupération des abonnés');
+        if (!disjoncteursRes.ok) throw new Error('Échec de la récupération des disjoncteurs');
+        if (!actionsRes.ok) throw new Error('Échec de la récupération des actions');
+
+        // Convertir en JSON
+        const [abonnesData, disjoncteursData, actionsData] = await Promise.all([
+          abonnesRes.json(),
+          disjoncteursRes.json(),
+          actionsRes.json()
+        ]);
+
+        // Préparer les données pour les camemberts
+        const abonnesChartData = [
+          { name: 'Abonnés actifs', value: abonnesData.length },
+          { name: 'Objectif restant', value: MAX_ABONNES - abonnesData.length }
+        ];
+        
+        const disjoncteursChartData = [
+          { name: 'Connectés', value: disjoncteursData.filter(d => d.current_state === 'ON').length },
+          { name: 'Hors service', value: disjoncteursData.filter(d => d.current_state === 'OFF').length }
+        ];
+        
+        const actionsChartData = [
+          { name: 'SMS envoyés', value: actionsData.length },
+          { name: 'Objectif restant', value: MAX_ACTIONS - actionsData.length }
+        ];
+
+        setChartData({
+          abonnesData: abonnesChartData,
+          disjoncteursData: disjoncteursChartData,
+          actionsData: actionsChartData,
+          totalAbonnes: abonnesData.length,
+          totalDisjoncteurs: disjoncteursData.length,
+          totalConnectes: disjoncteursData.filter(d => d.current_state === 'ON').length,
+          totalHorsService: disjoncteursData.filter(d => d.current_state === 'OFF').length,
+          totalActions: actionsData.length
         });
-        
-        if (!response.ok) throw new Error('Failed to fetch statistics');
-        
-        const data = await response.json();
-        setChartData(data);
       } catch (error) {
-        console.error('Error fetching statistics:', error);
+        console.error('Erreur lors de la récupération des statistiques:', error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchChartData();
   }, []);
 
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="h-96 flex items-center justify-center">
+          <p className="text-gray-500">Chargement des données...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="h-96 flex items-center justify-center">
+          <p className="text-red-500">Erreur: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold text-gray-700">Score de progression</h3>
+      <h3 className="text-lg font-semibold text-gray-700 mb-6">Statistiques globales</h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Camembert pour les abonnés */}
+        <div className="text-center">
+          <h4 className="text-md font-medium mb-4">Abonnés</h4>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData.abonnesData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  innerRadius={60}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                >
+                  {chartData.abonnesData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index === 0 ? COLORS[0] : COLORS[1]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-2 bg-blue-50 p-3 rounded-lg">
+            <p className="text-xl font-bold text-blue-700">
+              {chartData.totalAbonnes} / {MAX_ABONNES}
+            </p>
+            <p className="text-sm text-gray-600">Abonnés actifs sur objectif</p>
+          </div>
+        </div>
         
-        <div className="flex space-x-4">
-          <div className="flex items-center">
-            <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-            <span className="text-sm">Connectés</span>
+        {/* Camembert pour les disjoncteurs */}
+        <div className="text-center">
+          <h4 className="text-md font-medium mb-4">Disjoncteurs</h4>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData.disjoncteursData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                >
+                  {chartData.disjoncteursData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index === 0 ? COLORS[2] : COLORS[3]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-            <span className="text-sm">Hors service</span>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <div className="bg-green-50 p-2 rounded-lg">
+              <p className="text-lg font-bold text-green-700">{chartData.totalConnectes}</p>
+              <p className="text-xs text-gray-600">Connectés</p>
+            </div>
+            <div className="bg-red-50 p-2 rounded-lg">
+              <p className="text-lg font-bold text-red-700">{chartData.totalHorsService}</p>
+              <p className="text-xs text-gray-600">Hors service</p>
+            </div>
           </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
-            <span className="text-sm">Abonnés</span>
+        </div>
+        
+        {/* Camembert pour les actions (SMS) */}
+        <div className="text-center">
+          <h4 className="text-md font-medium mb-4">Actions (SMS)</h4>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData.actionsData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  innerRadius={60}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                >
+                  {chartData.actionsData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index === 0 ? COLORS[4] : COLORS[5]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-            <span className="text-sm">SMS</span>
+          <div className="mt-2 bg-purple-50 p-3 rounded-lg">
+            <p className="text-xl font-bold text-purple-700">
+              {chartData.totalActions} / {MAX_ACTIONS}
+            </p>
+            <p className="text-sm text-gray-600">SMS envoyés sur objectif</p>
           </div>
         </div>
       </div>
       
-      <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="Connectés" stroke="#3B82F6" activeDot={{ r: 8 }} />
-            <Line type="monotone" dataKey="Hors service" stroke="#EF4444" />
-            <Line type="monotone" dataKey="Abonnés" stroke="#F97316" />
-            <Line type="monotone" dataKey="SMS" stroke="#10B981" />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-      
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 bg-gray-50 rounded-lg">
-          <h4 className="text-gray-500 mb-2">Autre</h4>
-          <p className="text-sm">Aug 2021</p>
-          <p className="text-sm mt-1">Abondé: 162.1, 27.75%</p>
-          <p className="text-sm mt-1">Admito: 182.53, 31.25%</p>
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="text-gray-500 mb-2">Objectifs</h4>
+          <p className="text-sm">Abonnés: {MAX_ABONNES}</p>
+          <p className="text-sm">Disjoncteurs: {MAX_DISJONCTEURS}</p>
+          <p className="text-sm">SMS: {MAX_ACTIONS}</p>
         </div>
         
-        <div className="p-4 bg-gray-50 rounded-lg">
-          <h4 className="text-gray-500 mb-2">Consommation</h4>
-          <p className="text-sm">Communes SMS</p>
-          <p className="text-sm">Alertes</p>
-          <p className="text-sm">Paramètres</p>
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="text-gray-500 mb-2">Pourcentages</h4>
+          <p className="text-sm">
+            Abonnés: {((chartData.totalAbonnes / MAX_ABONNES) * 100).toFixed(1)}%
+          </p>
+          <p className="text-sm">
+            Connectés: {chartData.totalDisjoncteurs > 0 
+              ? ((chartData.totalConnectes / chartData.totalDisjoncteurs) * 100).toFixed(1) + '%'
+              : '0%'}
+          </p>
+          <p className="text-sm">
+            SMS: {((chartData.totalActions / MAX_ACTIONS) * 100).toFixed(1)}%
+          </p>
         </div>
         
-        <div className="p-4 bg-gray-50 rounded-lg">
-          <h4 className="text-gray-500 mb-2">Accès</h4>
-          <div className="grid grid-cols-4 gap-1">
-            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(month => (
-              <div key={month} className="text-center text-xs py-1 bg-white rounded">
-                {month}
-              </div>
-            ))}
-          </div>
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="text-gray-500 mb-2">Dernière mise à jour</h4>
+          <p className="text-sm">{new Date().toLocaleDateString()}</p>
+          <p className="text-sm">{new Date().toLocaleTimeString()}</p>
         </div>
       </div>
     </div>

@@ -1,8 +1,12 @@
 import React from 'react';
 import UserProfile from './UserProfile';
 import { 
-  HiHome, HiShoppingBag, HiTruck, HiUserGroup, HiOfficeBuilding 
+  HiHome,  HiTruck, HiUserGroup,  HiOutlineLogout  
 } from 'react-icons/hi';
+import { FaUserPlus } from 'react-icons/fa';
+import { FaBolt } from 'react-icons/fa';
+import { FaUserShield } from 'react-icons/fa';
+import { FaCrown } from 'react-icons/fa';
 import { NavLink } from 'react-router-dom';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
@@ -14,7 +18,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     }, 
     { 
       label: "Suppliers", 
-      icon: <HiUserGroup className="text-xl" />,
+      icon: <FaBolt className="text-xl" />,
       path: "/dashboard/suppliers" 
     },
     { 
@@ -24,12 +28,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     },
     { 
       label: "Subscribers", 
-      icon: <HiUserGroup className="text-xl" />,
+      icon: <FaUserPlus className="text-xl" />, 
       path: "/dashboard/subscribers" // Modifié: chemin absolu
     },
     { 
       label: "Administrators", 
-      icon: <HiShoppingBag className="text-xl" />,
+      icon: <FaUserShield className="text-xl" />,
       path: "/dashboard/Administrators" // Modifié: chemin absolu
     },
     { 
@@ -39,8 +43,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     },
     { 
       label: "SuperAdministrators", 
-      icon: <HiOfficeBuilding className="text-xl" />,
+      icon: <FaCrown className="text-xl" />,
       path: "/dashboard/SuperAdministrators" // Modifié: chemin absolu
+    },
+    { 
+      label: "Sign out", 
+      icon: <HiOutlineLogout className="text-xl" />,
+      path: "/dashboard/Sign-out" // Modifié: chemin absolu
     },
   ];
 
