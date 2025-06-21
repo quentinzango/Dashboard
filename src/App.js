@@ -1,7 +1,7 @@
+// src/App.js
 import './App.css';
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-
 import LoginPage from './pages/Login';
 import LayoutComponent from './components/layout/LayoutComponent';
 import PrivateRoute from './components/auth/PrivateRoute';
@@ -10,14 +10,12 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route 
-          path="/dashboard/*" 
-          element={
-            <PrivateRoute>
-              <LayoutComponent />
-            </PrivateRoute>
-          } 
-        />
+        {/* Routes protégées */}
+        <Route element={<PrivateRoute />}>
+          <Route path="/dashboard/*" element={<LayoutComponent />} />
+        </Route>
+        
+        {/* Routes publiques */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />

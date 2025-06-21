@@ -1,21 +1,57 @@
 import React from 'react';
 import UserProfile from './UserProfile';
 import { 
-  HiHome,  HiTruck, HiUserGroup,  HiOutlineLogout  
+  HiHome,  HiTruck, HiUserGroup,  HiOutlineLogout, HiOutlineUserCircle, HiOutlineDocumentText  
 } from 'react-icons/hi';
+
 import { FaUserPlus } from 'react-icons/fa';
 import { FaBolt } from 'react-icons/fa';
 import { FaUserShield } from 'react-icons/fa';
 import { FaCrown } from 'react-icons/fa';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      // Appel à l'API de déconnexion
+      const refreshToken = localStorage.getItem('refreshToken');
+      await fetch('http://localhost:8000/auth/logout/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({ refresh: refreshToken })
+      });
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    } finally {
+      // Supprimer les tokens et rediriger
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      navigate('/login');
+    }
+  };
+
   const menuItems = [
     { 
       label: "Dashboard", 
       icon: <HiHome className="text-xl" />,
       path: "/dashboard" 
     }, 
+    { 
+      label: "SuperAdministrators", 
+      icon: <FaCrown className="text-xl" />,
+      path: "/dashboard/SuperAdministrators"
+    },
+    { 
+      label: "Administrators", 
+      icon: <FaUserShield className="text-xl" />,
+      path: "/dashboard/Administrators"
+    },
     { 
       label: "Suppliers", 
       icon: <FaBolt className="text-xl" />,
@@ -24,32 +60,32 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     { 
       label: "Users", 
       icon: <HiUserGroup className="text-xl" />,
-      path: "/dashboard/users" // Modifié: chemin absolu
+      path: "/dashboard/users"
     },
     { 
       label: "Subscribers", 
       icon: <FaUserPlus className="text-xl" />, 
-      path: "/dashboard/subscribers" // Modifié: chemin absolu
+      path: "/dashboard/subscribers"
     },
     { 
-      label: "Administrators", 
-      icon: <FaUserShield className="text-xl" />,
-      path: "/dashboard/Administrators" // Modifié: chemin absolu
+      label: "Accounts", 
+      icon: <HiOutlineUserCircle className="text-xl" />,
+      path: "/dashboard/accounts"
+    },
+    { 
+      label: "Bills", 
+      icon: <HiOutlineDocumentText className="text-xl" />,
+      path: "/dashboard/bills"
     },
     { 
       label: "Map", 
       icon: <HiTruck className="text-xl" />,
-      path: "/dashboard/map" // Modifié: chemin absolu
-    },
-    { 
-      label: "SuperAdministrators", 
-      icon: <FaCrown className="text-xl" />,
-      path: "/dashboard/SuperAdministrators" // Modifié: chemin absolu
+      path: "/dashboard/map"
     },
     { 
       label: "Sign out", 
       icon: <HiOutlineLogout className="text-xl" />,
-      path: "/dashboard/Sign-out" // Modifié: chemin absolu
+      action: handleLogout
     },
   ];
 
@@ -77,27 +113,50 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       {/* Items du menu */}
       <nav className="flex-1 overflow-y-auto py-2">
         {menuItems.map((item, index) => (
-          <NavLink 
-            key={index}
-            to={item.path}
-            className={({ isActive }) => 
-              `flex items-center w-full py-3 px-5 text-left
-               hover:bg-gray-800 transition-colors duration-200
-               ${isOpen ? 'justify-start' : 'justify-center'}
-               ${isActive ? 'bg-gray-800 border-l-4 border-indigo-500' : ''}`
-            }
-          >
-            <div className="flex-shrink-0 text-gray-300">
-              {item.icon}
-            </div>
-            
-            <span className={`
-              ml-3 text-gray-300 transition-opacity
-              ${isOpen ? 'opacity-100' : 'opacity-0'}
-            `}>
-              {item.label}
-            </span>
-          </NavLink>
+          item.action ? (
+            <button
+              key={index}
+              onClick={item.action}
+              className={`
+                flex items-center w-full py-3 px-5 text-left
+                hover:bg-gray-800 transition-colors duration-200
+                ${isOpen ? 'justify-start' : 'justify-center'}
+              `}
+            >
+              <div className="flex-shrink-0 text-gray-300">
+                {item.icon}
+              </div>
+              
+              <span className={`
+                ml-3 text-gray-300 transition-opacity
+                ${isOpen ? 'opacity-100' : 'opacity-0'}
+              `}>
+                {item.label}
+              </span>
+            </button>
+          ) : (
+            <NavLink 
+              key={index}
+              to={item.path}
+              className={({ isActive }) => 
+                `flex items-center w-full py-3 px-5 text-left
+                 hover:bg-gray-800 transition-colors duration-200
+                 ${isOpen ? 'justify-start' : 'justify-center'}
+                 ${isActive ? 'bg-gray-800 border-l-4 border-indigo-500' : ''}`
+              }
+            >
+              <div className="flex-shrink-0 text-gray-300">
+                {item.icon}
+              </div>
+              
+              <span className={`
+                ml-3 text-gray-300 transition-opacity
+                ${isOpen ? 'opacity-100' : 'opacity-0'}
+              `}>
+                {item.label}
+              </span>
+            </NavLink>
+          )
         ))}
       </nav>
       

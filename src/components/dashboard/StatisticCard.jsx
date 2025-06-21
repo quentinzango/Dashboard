@@ -1,12 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { 
+  PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Label
+} from 'recharts';
 
-const StatisticCard = () => {
+const StatisticCard = ({ selectedSupplier }) => {
   const [chartData, setChartData] = useState({
     abonnesData: [],
     disjoncteursData: [],
-    actionsData: []
+    actionsData: [],
+    consumptionBarData: [],
+    consumptionPieData: [],
+    totalAbonnes: 0,
+    totalDisjoncteurs: 0,
+    totalConnectes: 0,
+    totalHorsService: 0,
+    totalActions: 0
   });
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -63,10 +74,24 @@ const StatisticCard = () => {
           { name: 'Objectif restant', value: MAX_ACTIONS - actionsData.length }
         ];
 
+        // Récupérer les données de consommation
+        const consumptionUrl = selectedSupplier 
+          ? `http://localhost:8000/api/v1/stats/?supplier_id=${selectedSupplier}`
+          : `http://localhost:8000/api/v1/stats/`;
+          
+        const consumptionRes = await fetch(consumptionUrl, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!consumptionRes.ok) throw new Error('Échec de la récupération des données de consommation');
+        const consumptionData = await consumptionRes.json();
+
         setChartData({
           abonnesData: abonnesChartData,
           disjoncteursData: disjoncteursChartData,
           actionsData: actionsChartData,
+          consumptionBarData: consumptionData.bar_data,
+          consumptionPieData: consumptionData.pie_data,
           totalAbonnes: abonnesData.length,
           totalDisjoncteurs: disjoncteursData.length,
           totalConnectes: disjoncteursData.filter(d => d.current_state === 'ON').length,
@@ -82,7 +107,7 @@ const StatisticCard = () => {
     };
 
     fetchChartData();
-  }, []);
+  }, [selectedSupplier]);
 
   if (loading) {
     return (
@@ -211,6 +236,63 @@ const StatisticCard = () => {
               {chartData.totalActions} / {MAX_ACTIONS}
             </p>
             <p className="text-sm text-gray-600">SMS envoyés sur objectif</p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Nouveaux graphiques de consommation */}
+      <div className="mt-12">
+        <h3 className="text-lg font-semibold text-gray-700 mb-6">Consommation d'énergie</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Graphique en barres */}
+          <div className="text-center">
+            <h4 className="text-md font-medium mb-4">Évolution mensuelle</h4>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData.consumptionBarData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis
+                  domain={[0, 1000]}
+                  ticks={[0, 200, 400, 600, 800, 1000]} 
+                  >
+                    
+                    <Label value="kWh" angle={-90} position="insideLeft" />
+                  </YAxis>
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="consumption" name="Consommation" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          
+          {/* Graphique en camembert */}
+          <div className="text-center">
+            <h4 className="text-md font-medium mb-4">Répartition par région</h4>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData.consumptionPieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {chartData.consumptionPieData.map((entry, index) => (
+                      <Cell key={`pie-cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`${value} kWh`, 'Consommation']} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       </div>

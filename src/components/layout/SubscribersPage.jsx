@@ -136,15 +136,15 @@ const SubscribersPage = () => {
 
     const token = localStorage.getItem('accessToken');
     try {
-      // Formatage des données pour l'API
+      // CORRECTION : Formatage des données avec les noms de champs corrects
       const payload = {
-        utilisateur: parseInt(utilisateur, 10),
-        fournisseur_energie: parseInt(fournisseur_energie, 10),
+        utilisateur_id: parseInt(utilisateur, 10),
+        fournisseur_energie_id: parseInt(fournisseur_energie, 10),
       };
       
       // Ajout optionnel de la ville
       if (ville) {
-        payload.ville = parseInt(ville, 10);
+        payload.ville_id = parseInt(ville, 10);
       }
 
       const res = await fetch('http://localhost:8000/api/v1/abonnes/', {
@@ -163,12 +163,12 @@ const SubscribersPage = () => {
         
         // Extraction des messages d'erreur détaillés
         if (errorData) {
-          if (errorData.non_field_errors) {
-            errorMessage = errorData.non_field_errors.join(', ');
-          } else {
-            // Si les erreurs sont dans un objet, on les extrait
-            errorMessage = Object.values(errorData).flat().join(', ');
+          // CORRECTION : Meilleure gestion des erreurs
+          const errors = [];
+          for (const field in errorData) {
+            errors.push(`${field}: ${errorData[field].join(', ')}`);
           }
+          errorMessage = errors.join(' | ');
         }
         
         throw new Error(errorMessage);

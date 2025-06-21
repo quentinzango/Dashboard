@@ -6,10 +6,16 @@ const KnowledgeBase = ({
   subscribersCount,
   smsCount,
   selectedMonth,
-  onMonthChange
+  onMonthChange,
+  totalConsumption,
+  selectedDate,
+  onDateChange,
+  suppliers,
+  selectedSupplier,
+  onSupplierChange
 }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
       {/* Compteurs connectés */}
       <div className="bg-blue-100 rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
         <div className="flex justify-between items-start">
@@ -97,6 +103,47 @@ const KnowledgeBase = ({
           <div className="bg-green-300 p-2 rounded-lg">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+      
+      {/* Consommation Totale */}
+      <div className="bg-purple-100 rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-700">Consommation ({selectedDate})</h3>
+            <p className="text-3xl font-bold mt-2">
+              {totalConsumption}
+              <span className="text-xs ml-1 text-gray-500">kWh</span>
+            </p>
+            <div className="mt-2 space-y-2">
+              <input 
+                type="month" 
+                value={selectedDate}
+                onChange={(e) => onDateChange(e.target.value)}
+                className="text-sm p-1 border rounded focus:outline-none w-full"
+              />
+              
+              {suppliers && suppliers.length > 0 && (
+                <select 
+                  value={selectedSupplier || ''}
+                  onChange={(e) => onSupplierChange(e.target.value)}
+                  className="text-sm p-1 border rounded focus:outline-none w-full"
+                >
+                  <option value="">Tous les fournisseurs</option>
+                  {suppliers.map(supplier => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.nom}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+          <div className="bg-purple-300 p-2 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
         </div>
