@@ -20,45 +20,35 @@ const StatisticCard = ({ selectedSupplier }) => {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7));
+  const [exporting, setExporting] = useState(false);
   
-  // Objectifs maximums pour chaque catégorie
   const MAX_ABONNES = 10000;
-  const MAX_DISJONCTEURS = 100;
+  const MAX_DISJONCTEURS = 10000;
   const MAX_ACTIONS = 50000;
   
-  // Couleurs personnalisées pour les camemberts
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
   
   useEffect(() => {
     const fetchChartData = async () => {
       const token = localStorage.getItem('accessToken');
       try {
-        // Récupérer les données nécessaires
         const [abonnesRes, disjoncteursRes, actionsRes] = await Promise.all([
-          fetch('http://localhost:8000/api/v1/abonnes/', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          }),
-          fetch('http://localhost:8000/api/v1/disjoncteurs/', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          }),
-          fetch('http://localhost:8000/api/v1/actions/', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
+          fetch('http://localhost:8000/api/v1/abonnes/', { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('http://localhost:8000/api/v1/disjoncteurs/', { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('http://localhost:8000/api/v1/actions/', { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
 
-        // Vérifier les réponses
         if (!abonnesRes.ok) throw new Error('Échec de la récupération des abonnés');
         if (!disjoncteursRes.ok) throw new Error('Échec de la récupération des disjoncteurs');
         if (!actionsRes.ok) throw new Error('Échec de la récupération des actions');
 
-        // Convertir en JSON
         const [abonnesData, disjoncteursData, actionsData] = await Promise.all([
           abonnesRes.json(),
           disjoncteursRes.json(),
           actionsRes.json()
         ]);
 
-        // Préparer les données pour les camemberts
         const abonnesChartData = [
           { name: 'Abonnés actifs', value: abonnesData.length },
           { name: 'Objectif restant', value: MAX_ABONNES - abonnesData.length }
@@ -74,14 +64,11 @@ const StatisticCard = ({ selectedSupplier }) => {
           { name: 'Objectif restant', value: MAX_ACTIONS - actionsData.length }
         ];
 
-        // Récupérer les données de consommation
         const consumptionUrl = selectedSupplier 
           ? `http://localhost:8000/api/v1/stats/?supplier_id=${selectedSupplier}`
           : `http://localhost:8000/api/v1/stats/`;
           
-        const consumptionRes = await fetch(consumptionUrl, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const consumptionRes = await fetch(consumptionUrl, { headers: { 'Authorization': `Bearer ${token}` } });
         
         if (!consumptionRes.ok) throw new Error('Échec de la récupération des données de consommation');
         const consumptionData = await consumptionRes.json();
@@ -108,6 +95,49 @@ const StatisticCard = ({ selectedSupplier }) => {
 
     fetchChartData();
   }, [selectedSupplier]);
+
+  // Fonction corrigée pour gérer l'export CSV
+  const handleExportCSV = async () => {
+    setExporting(true);
+    setError(null);
+    const token = localStorage.getItem('accessToken');
+    
+    try {
+      const params = new URLSearchParams({
+        period: period,
+        supplier_id: selectedSupplier || ''
+      });
+      
+      const response = await fetch(`http://localhost:8000/api/v1/export-consumption/?${params.toString()}`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Échec de l'export: ${errorText}`);
+      }
+      
+      // Récupération directe du blob CSV
+      const csvData = await response.blob();
+      
+      // Création et téléchargement du fichier
+      const url = URL.createObjectURL(csvData);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `consommation_${period}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+    } catch (error) {
+      console.error('Erreur lors de l\'export:', error);
+      setError(error.message);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -147,12 +177,12 @@ const StatisticCard = ({ selectedSupplier }) => {
                   labelLine={false}
                   outerRadius={80}
                   innerRadius={60}
-                  fill="#8884d8"
+                  fill="#00008B"
                   dataKey="value"
                   label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 >
                   {chartData.abonnesData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === 0 ? COLORS[0] : COLORS[1]} />
+                    <Cell key={`cell-${index}`} fill={index === 0 ? COLORS[0] : COLORS[3]} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -240,7 +270,7 @@ const StatisticCard = ({ selectedSupplier }) => {
         </div>
       </div>
       
-      {/* Nouveaux graphiques de consommation */}
+      {/* Graphiques de consommation */}
       <div className="mt-12">
         <h3 className="text-lg font-semibold text-gray-700 mb-6">Consommation d'énergie</h3>
         
@@ -253,11 +283,7 @@ const StatisticCard = ({ selectedSupplier }) => {
                 <BarChart data={chartData.consumptionBarData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
-                  <YAxis
-                  domain={[0, 1000]}
-                  ticks={[0, 200, 400, 600, 800, 1000]} 
-                  >
-                    
+                  <YAxis domain={[0, 1000]} ticks={[0, 200, 400, 600, 800, 1000]}>
                     <Label value="kWh" angle={-90} position="insideLeft" />
                   </YAxis>
                   <Tooltip />
@@ -293,6 +319,50 @@ const StatisticCard = ({ selectedSupplier }) => {
                 </PieChart>
               </ResponsiveContainer>
             </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Section d'export */}
+      <div className="mt-12">
+        <h3 className="text-lg font-semibold text-gray-700 mb-4">Export des données de consommation</h3>
+        
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <div className="max-w-md mx-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1">
+                <label htmlFor="period" className="block text-sm font-medium text-gray-700 mb-1">
+                  Sélectionnez la période
+                </label>
+                <input
+                  type="month"
+                  id="period"
+                  value={period}
+                  onChange={(e) => setPeriod(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="mt-4 sm:mt-6">
+                <button
+                  onClick={handleExportCSV}
+                  disabled={exporting}
+                  className={`w-full sm:w-auto px-6 py-2 rounded-lg text-white font-medium ${
+                    exporting ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                >
+                  {exporting ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Export en cours...
+                    </span>
+                  ) : 'Exporter en CSV'}
+                </button>
+              </div>
+            </div>
+            {error && <p className="mt-4 text-red-500 text-center">{error}</p>}
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import LoginPage from './pages/Login';
 import LayoutComponent from './components/layout/LayoutComponent';
 import PrivateRoute from './components/auth/PrivateRoute';
+import DisjoncteursPage from './components/layout/DisjoncteursPage';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         {/* Routes protégées */}
         <Route element={<PrivateRoute />}>
           <Route path="/dashboard/*" element={<LayoutComponent />} />
+          <Route path="/subscribers/:id/disjoncteurs" element={<DisjoncteursPage />} />
         </Route>
         
         {/* Routes publiques */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiSearch, FiTrash2, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiSearch, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
 const SuperAdministratorsPage = () => {
@@ -12,166 +12,104 @@ const SuperAdministratorsPage = () => {
   const itemsPerPage = 5;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newSuperAdmin, setNewSuperAdmin] = useState({
-    utilisateur: '',  // Correspond à l'ID de l'utilisateur
-    numero_tel2: ''   // Correspond au champ dans votre modèle
+    utilisateur: '',  
+    numero_tel2: ''   
   });
   const [errors, setErrors] = useState({});
 
-  // Fetch super admins and users
+  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('accessToken');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
+        if (!token) { navigate('/login'); return; }
 
-        // Récupérer les super administrateurs
-        const superAdminsRes = await fetch('http://localhost:8000/api/v1/superadministrateurs/', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!superAdminsRes.ok) throw new Error('Failed to fetch super admins');
-        const superAdminsData = await superAdminsRes.json();
-        
-        // CORRECTION : Accès aux détails utilisateur via utilisateur_detail
-        const enhancedSuperAdmins = superAdminsData.map(sa => ({
-          ...sa,
-          // Utilisez le champ utilisateur_detail retourné par le serializer
-          email: sa.utilisateur_detail?.email || 'Unknown'
-        }));
-        
-        // Récupérer les utilisateurs
-        const usersRes = await fetch('http://localhost:8000/api/v1/auth/users/', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
+        const [saRes, usersRes] = await Promise.all([
+          fetch('http://localhost:8000/api/v1/superadministrateurs/', {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          fetch('http://localhost:8000/api/v1/auth/users/', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
+        if (!saRes.ok) throw new Error('Failed to fetch super admins');
         if (!usersRes.ok) throw new Error('Failed to fetch users');
+
+        const saData = await saRes.json();
         const usersData = await usersRes.json();
 
-        setSuperAdmins(enhancedSuperAdmins);
+        const enhancedSA = saData.map(sa => ({
+          ...sa,
+          email: sa.utilisateur_detail?.email || 'Unknown'
+        }));
+
+        setSuperAdmins(enhancedSA);
         setUsers(usersData);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching data:', error);
+      } catch (err) {
+        console.error(err);
+      } finally {
         setLoading(false);
       }
     };
-    
     fetchData();
   }, [navigate]);
 
-  // Filter super admins based on search term
-  const filteredSuperAdmins = superAdmins.filter(superAdmin => {
-    const searchLower = searchTerm.toLowerCase();
+  // Filter + paginate
+  const filtered = superAdmins.filter(sa => {
+    const s = searchTerm.toLowerCase();
     return (
-      (superAdmin.email && superAdmin.email.toLowerCase().includes(searchLower)) ||
-      (superAdmin.numero_tel2 && superAdmin.numero_tel2.toLowerCase().includes(searchLower)
-    ));
+      sa.email.toLowerCase().includes(s) ||
+      sa.numero_tel2.toLowerCase().includes(s)
+    );
   });
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const start = (currentPage - 1) * itemsPerPage;
+  const currentItems = filtered.slice(start, start + itemsPerPage);
 
-  // Pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredSuperAdmins.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredSuperAdmins.length / itemsPerPage);
-
-  // Handle form input changes
-  const handleInputChange = (e) => {
+  // Form handlers
+  const handleInputChange = e => {
     const { name, value } = e.target;
-    setNewSuperAdmin({
-      ...newSuperAdmin,
-      [name]: value
-    });
+    setNewSuperAdmin(prev => ({ ...prev, [name]: value }));
   };
-
-  // Validate form
   const validateForm = () => {
-    const newErrors = {};
-    if (!newSuperAdmin.utilisateur) newErrors.utilisateur = 'User is required';
-    if (!newSuperAdmin.numero_tel2) newErrors.numero_tel2 = 'Phone number is required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const errs = {};
+    if (!newSuperAdmin.utilisateur) errs.utilisateur = 'User is required';
+    if (!newSuperAdmin.numero_tel2) errs.numero_tel2 = 'Phone number is required';
+    setErrors(errs);
+    return !Object.keys(errs).length;
   };
-
-  // Handle form submission
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (!validateForm()) return;
-    
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      const response = await fetch('http://localhost:8000/api/v1/superadministrateurs/', {
+      if (!token) { navigate('/login'); return; }
+      const res = await fetch('http://localhost:8000/api/v1/superadministrateurs/', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          utilisateur: parseInt(newSuperAdmin.utilisateur),
+          utilisateur: parseInt(newSuperAdmin.utilisateur, 10),
           numero_tel2: newSuperAdmin.numero_tel2
         })
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create super admin');
-      }
-
-      const createdSuperAdmin = await response.json();
-      
-      // CORRECTION : Utilisez le champ email de la réponse
-      const enhancedSuperAdmin = {
-        ...createdSuperAdmin,
-        email: createdSuperAdmin.utilisateur_detail?.email || 'Unknown'
-      };
-      
-      // Mettre à jour l'état local
-      setSuperAdmins([...superAdmins, enhancedSuperAdmin]);
-      
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to create');
+      const created = await res.json();
+      setSuperAdmins(prev => [
+        ...prev,
+        { 
+          ...created,
+          email: created.utilisateur_detail?.email || 'Unknown'
+        }
+      ]);
       setIsModalOpen(false);
       setNewSuperAdmin({ utilisateur: '', numero_tel2: '' });
-    } catch (error) {
-      console.error('Error creating super admin:', error);
-      setErrors({ submit: error.message });
-    }
-  };
-
-  // Handle delete
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this super admin?')) {
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-
-        const response = await fetch(`http://localhost:8000/api/v1/superadministrateurs/${id}/`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) throw new Error('Failed to delete super admin');
-        
-        // Mise à jour locale
-        setSuperAdmins(superAdmins.filter(superAdmin => superAdmin.id !== id));
-      } catch (error) {
-        console.error('Error deleting super admin:', error);
-        setErrors({ submit: error.message });
-      }
+      setErrors({});
+    } catch (err) {
+      console.error(err);
+      setErrors({ submit: err.message });
     }
   };
 
@@ -185,75 +123,68 @@ const SuperAdministratorsPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="mb-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">List of Super Administrators</h1>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Add Super Admin
-          </button>
+      {/* Header */}
+      <div className="mb-8 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">List of Super Administrators</h1>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+          </svg>
+          Add Super Admin
+        </button>
+      </div>
+
+      {/* Search & total */}
+      <div className="mt-6 flex justify-between items-center">
+        <div className="relative w-1/3">
+          <input
+            type="text"
+            placeholder="Search by email or phone"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <FiSearch className="h-5 w-5 text-gray-400" />
+          </div>
         </div>
-        
-        <div className="mt-6 flex justify-between items-center">
-          <div className="relative w-1/3">
-            <input
-              type="text"
-              placeholder="Search by email or phone"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <FiSearch className="h-5 w-5 text-gray-400" />
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <h3 className="text-gray-500">Total Super Admins</h3>
-            <p className="text-2xl font-bold">{filteredSuperAdmins.length}</p>
-          </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm">
+          <h3 className="text-gray-500">Total Super Admins</h3>
+          <p className="text-2xl font-bold">{filtered.length}</p>
         </div>
       </div>
-      
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+
+      {/* Table */}
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden mt-6">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utilisateur</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NUMERO TEL2</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Utilisateur
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Numéro Tel2
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {currentItems.length > 0 ? (
-              currentItems.map((superAdmin) => (
-                <tr key={superAdmin.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {/* CORRECTION : Utilisez directement le champ email */}
-                    <div className="text-sm font-medium text-gray-900">{superAdmin.email}</div>
+              currentItems.map(sa => (
+                <tr key={sa.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {sa.email}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{superAdmin.numero_tel2}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button 
-                      onClick={() => handleDelete(superAdmin.id)} 
-                      className="text-red-600 hover:text-red-900 flex items-center"
-                    >
-                      <FiTrash2 className="mr-1" />
-                      Remove
-                    </button>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {sa.numero_tel2}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="3" className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan="2" className="px-6 py-4 text-center text-sm text-gray-500">
                   No super administrators found
                 </td>
               </tr>
@@ -261,28 +192,25 @@ const SuperAdministratorsPage = () => {
           </tbody>
         </table>
       </div>
-      
+
       {/* Pagination */}
-      {filteredSuperAdmins.length > itemsPerPage && (
+      {filtered.length > itemsPerPage && (
         <div className="mt-6 flex items-center justify-between">
           <div className="text-sm text-gray-700">
             Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages}</span>
           </div>
-          
           <div className="flex space-x-2">
             <button
-              onClick={() => setCurrentPage(currentPage - 1)}
+              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
               disabled={currentPage === 1}
               className={`px-3 py-1 rounded-md flex items-center ${
-                currentPage === 1 
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                currentPage === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <FiChevronLeft className="mr-1" />
-              Previous
+              <FiChevronLeft className="mr-1" /> Previous
             </button>
-            
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
               <button
                 key={page}
@@ -296,24 +224,22 @@ const SuperAdministratorsPage = () => {
                 {page}
               </button>
             ))}
-            
             <button
-              onClick={() => setCurrentPage(currentPage + 1)}
+              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
               disabled={currentPage === totalPages}
               className={`px-3 py-1 rounded-md flex items-center ${
                 currentPage === totalPages
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              Next
-              <FiChevronRight className="ml-1" />
+              Next <FiChevronRight className="ml-1" />
             </button>
           </div>
         </div>
       )}
 
-      {/* Add Super Admin Modal */}
+      {/* Add Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
@@ -323,10 +249,9 @@ const SuperAdministratorsPage = () => {
                 {errors.submit}
               </div>
             )}
-            
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="utilisateur">
+                <label htmlFor="utilisateur" className="block text-gray-700 text-sm font-bold mb-2">
                   Select User
                 </label>
                 <select
@@ -340,18 +265,19 @@ const SuperAdministratorsPage = () => {
                 >
                   <option value="">Select a user</option>
                   {users
-                    .filter(user => !superAdmins.some(sa => sa.utilisateur === user.id))
-                    .map(user => (
-                      <option key={user.id} value={user.id}>
-                        {user.email} ({user.nom})
+                    .filter(u => !superAdmins.some(sa => sa.utilisateur === u.id))
+                    .map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.email} ({u.nom})
                       </option>
                     ))}
                 </select>
-                {errors.utilisateur && <p className="text-red-500 text-xs italic mt-1">{errors.utilisateur}</p>}
+                {errors.utilisateur && (
+                  <p className="text-red-500 text-xs italic mt-1">{errors.utilisateur}</p>
+                )}
               </div>
-              
               <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="numero_tel2">
+                <label htmlFor="numero_tel2" className="block text-gray-700 text-sm font-bold mb-2">
                   Secondary Phone Number
                 </label>
                 <input
@@ -365,9 +291,10 @@ const SuperAdministratorsPage = () => {
                     errors.numero_tel2 ? 'border-red-500' : ''
                   }`}
                 />
-                {errors.numero_tel2 && <p className="text-red-500 text-xs italic mt-1">{errors.numero_tel2}</p>}
+                {errors.numero_tel2 && (
+                  <p className="text-red-500 text-xs italic mt-1">{errors.numero_tel2}</p>
+                )}
               </div>
-              
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   type="button"

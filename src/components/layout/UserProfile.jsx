@@ -1,14 +1,14 @@
 import React from 'react';
-
+import logoImage from '../../assets/images/pop.jpg';
 const UserProfile = () => {
   return (
     <div className="p-5 flex items-center justify-center">
-      {/* Logo EnMKit seul */}
-      <div className="flex items-center justify-center bg-gradient-to-r from-green-500 to-blue-600 rounded-full w-20 h-20">
-        <span className="text-white text-lg font-extrabold tracking-tight">
-          EnMKit
-        </span>
-      </div>
+      {/* Image pop.jpg */}
+      <img 
+        src={logoImage}
+        alt="" 
+        className="rounded-full w-30 h-30 object-cover"
+      />
     </div>
   );
 };

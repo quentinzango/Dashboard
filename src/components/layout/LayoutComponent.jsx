@@ -11,6 +11,7 @@ import SuperAdministratorsPage from './SuperAdministratorsPage';
 import AdministratorsPage from './AdministratorsPage';
 import AccountsPage from './AccountsPage'; 
 import BillsPage from './BillsPage'; 
+import EquipementsPage from './EquipementsPage';
 
 const LayoutComponent = () => {
   // ─── États globaux ─────────────────────────────────────────────────
@@ -204,6 +205,7 @@ const LayoutComponent = () => {
             <Route path="/Administrators" element={<AdministratorsPage />} />
             <Route path="/accounts" element={<AccountsPage />} />
             <Route path="/bills" element={<BillsPage />} />
+            <Route path="/equipements" element={<EquipementsPage />} /> 
 
           </Routes>
         </div>

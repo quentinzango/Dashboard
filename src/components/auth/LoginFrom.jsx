@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import loginImage from '../../assets/images/login.png';
+import popImage from '../../assets/images/pop.jpg'; // Import de la nouvelle image
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
@@ -26,20 +27,16 @@ const LoginForm = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        // Ton API peut renvoyer un champ `detail` ou une liste d'erreurs
         const msg = data.detail || data.message || JSON.stringify(data);
         throw new Error(msg);
       }
 
-      // Supposons que ton API renvoie { access: 'jwt-token', refresh: 'jwt-refresh', user: { ... } }
       const { access, refresh } = data;
       if (!access) throw new Error("Token non reçu");
 
-      // Sauvegarde les tokens pour les prochaines requêtes authentifiées
       localStorage.setItem('accessToken', access);
       localStorage.setItem('refreshToken', refresh);
 
-      // Redirection vers le dashboard
       navigate('/dashboard');
     } catch (err) {
       console.error('Erreur de login :', err);
@@ -63,9 +60,16 @@ const LoginForm = () => {
       {/* Colonne de droite avec le formulaire */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-4 bg-black">
         <div className="w-full max-w-md">
-          <div className="text-center mb-10">
-            <h1 className="text-3xl font-bold text-white">Iconk</h1>
-            <h2 className="mt-2 text-xl font-semibold text-gray-300">
+          <div className="text-center mb-8">
+            {/* Remplacer 'Iconk' par l'image pop.jpg */}
+            <div className="flex justify-center mb-4">
+              <img 
+                src={popImage} 
+                alt="Logo" 
+                className="w-30 h-30 rounded-full object-cover border-4 border-indigo-600 shadow-lg"
+              />
+            </div>
+            <h2 className="mt-2 text-2xl font-bold text-white">
               Log In to Admin Panel
             </h2>
             <p className="mt-2 text-sm text-gray-400">

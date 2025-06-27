@@ -1,5 +1,7 @@
 // src/components/pages/BillsPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
+import { pdf } from '@react-pdf/renderer';
+import InvoiceTemplate from './InvoiceTemplate';
 
 const BillsPage = () => {
   const [bills, setBills] = useState([]);
@@ -41,7 +43,7 @@ const BillsPage = () => {
     }
   }, [filter]);
 
-  // ─── 2) Paiement manuel d’une facture ─────────────────────────────
+  // ─── 2) Paiement manuel d'une facture ─────────────────────────────
   const handlePayBill = async (billId) => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
@@ -68,6 +70,71 @@ const BillsPage = () => {
     } catch (err) {
       alert(`Erreur: ${err.message}`);
     }
+  };
+
+  // ─── 3) Affichage et téléchargement de la facture au format PDF ───
+  const handleViewInvoice = (bill) => {
+    // Créer le document PDF
+    const blobPromise = pdf(<InvoiceTemplate bill={bill} />).toBlob();
+    
+    blobPromise.then(blob => {
+      // Créer une URL pour le blob
+      const url = URL.createObjectURL(blob);
+      const filename = `facture_${bill.abonne.replace(/\s+/g, '_')}_${bill.periode}.pdf`;
+      
+      // Ouvrir dans un nouvel onglet pour visualisation
+      const newWindow = window.open(url, '_blank');
+      
+      // Créer un lien de téléchargement caché
+      const downloadLink = document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.download = filename;
+      downloadLink.style.display = 'none';
+      document.body.appendChild(downloadLink);
+      
+      // Ajouter un bouton de téléchargement dans le nouvel onglet
+      if (newWindow) {
+        newWindow.onload = () => {
+          const downloadBtn = newWindow.document.createElement('button');
+          downloadBtn.innerText = 'Télécharger la facture';
+          downloadBtn.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+          `;
+          
+          downloadBtn.onclick = () => {
+            downloadLink.click();
+            
+            // Nettoyer après 1 seconde
+            setTimeout(() => {
+              document.body.removeChild(downloadLink);
+              URL.revokeObjectURL(url);
+            }, 1000);
+          };
+          
+          newWindow.document.body.appendChild(downloadBtn);
+        };
+      } else {
+        // Si la fenêtre n'a pas pu s'ouvrir, déclencher le téléchargement directement
+        downloadLink.click();
+        
+        // Nettoyer après 1 seconde
+        setTimeout(() => {
+          document.body.removeChild(downloadLink);
+          URL.revokeObjectURL(url);
+        }, 1000);
+      }
+    });
   };
 
   // ─── Effet : chargement au montage et à chaque changement de filtre ─
@@ -158,11 +225,17 @@ const BillsPage = () => {
                       : 'bg-yellow-100 text-yellow-800'
                   }`}>{bill.statut}</span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex space-x-2">
+                  <button
+                    onClick={() => handleViewInvoice(bill)}
+                    className="text-blue-600 hover:text-blue-900 font-medium"
+                  >
+                    Voir la facture
+                  </button>
                   {(bill.statut === 'en_attente' || bill.statut === 'impayee') ? (
                     <button
                       onClick={() => handlePayBill(bill.id)}
-                      className="text-indigo-600 hover:text-indigo-900"
+                      className="text-indigo-600 hover:text-indigo-900 font-medium"
                     >
                       Payer
                     </button>

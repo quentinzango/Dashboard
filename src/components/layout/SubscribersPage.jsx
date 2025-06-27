@@ -324,6 +324,14 @@ const SubscribersPage = () => {
                     <td className="px-6 py-4">{s.supplier}</td>
                     <td className="px-6 py-4">{s.city}</td>
                     <td className="px-6 py-4 space-x-3">
+                      {/* Nouveau bouton "Voir disjoncteurs" */}
+                      <button 
+                        onClick={() => navigate(`/subscribers/${s.id}/disjoncteurs`)} 
+                        className="text-blue-600 hover:underline"
+                      >
+                        Voir disjoncteurs
+                      </button>
+                      
                       <button 
                         onClick={() => navigate(`/subscribers/edit/${s.id}`)} 
                         className="text-indigo-600 hover:underline"
