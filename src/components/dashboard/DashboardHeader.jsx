@@ -14,7 +14,7 @@ const DashboardHeader = () => {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
 
-        const response = await fetch('http://localhost:8000/api/v1/auth/users/me/', {
+        const response = await fetch('https://www.emkit.site/api/v1/auth/users/me/', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
