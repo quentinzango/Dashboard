@@ -27,7 +27,7 @@ const UsersPage = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Vous devez vous connecter.');
 
-      const res = await fetch('http://localhost:8000/api/v1/auth/users/', {
+      const res = await fetch('https://www.emkit.site/api/v1/auth/users/', {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -75,7 +75,7 @@ const UsersPage = () => {
         return;
       }
 
-      const res = await fetch(`http://localhost:8000/api/v1/auth/users/${userId}/`, {
+      const res = await fetch(`https://www.emkit.site/api/v1/auth/users/${userId}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -105,7 +105,7 @@ const UsersPage = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Vous devez vous connecter.');
 
-      const res = await fetch('http://localhost:8000/api/v1/auth/register/', {
+      const res = await fetch('https://www.emkit.site/api/v1/auth/register/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

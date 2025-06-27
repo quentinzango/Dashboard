@@ -185,8 +185,8 @@ const AdministratorsPage = () => {
           navigate('/login');
           return;
         }
-
-        const response = await fetch(`http://localhost:8000/api/v1/administrateurs/${id}/`, {
+          //http://localhost:8000/api/v1/administrateurs/${id}
+        const response = await fetch(`https://www.emkit.site/api/v1/administrateurs/${id}/`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`
