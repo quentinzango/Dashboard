@@ -20,7 +20,7 @@ const EquipementsPage = () => {
   const fetchEquipements = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('https://www.emkit.site/typeequipements/', {
+      const response = await fetch('https://www.emkit.site/api/v1/typeequipements/', {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -62,8 +62,8 @@ const EquipementsPage = () => {
     e.preventDefault();
     
     const url = currentEquipement 
-      ? `https://www.emkit.site/typeequipements/${currentEquipement.id}/`
-      : 'https://www.emkit.site/typeequipements/';
+      ? `https://www.emkit.site/api/v1/typeequipements/${currentEquipement.id}/`
+      : 'https://www.emkit.site/api/v1/typeequipements/';
     
     const method = currentEquipement ? 'PUT' : 'POST';
     
@@ -93,7 +93,7 @@ const EquipementsPage = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce type d\'équipement ?')) {
       try {
-        const response = await fetch(`https://www.emkit.site/typeequipements/${id}/`, {
+        const response = await fetch(`https://www.emkit.site/api/v1/typeequipements/${id}/`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` }
         });

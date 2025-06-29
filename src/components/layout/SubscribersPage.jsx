@@ -31,10 +31,10 @@ const SubscribersPage = () => {
 
     try {
       const [resSubs, resUsers, resSupp, resCities] = await Promise.all([
-        fetch('https://www.emkit.site/abonnes/', { headers }),
+        fetch('https://www.emkit.site/api/v1/abonnes/', { headers }),
         fetch('https://www.emkit.site/api/v1/auth/users/', { headers }),
-        fetch('https://www.emkit.site/fournisseurs/', { headers }),
-        fetch('https://www.emkit.site/villes/', { headers })
+        fetch('https://www.emkit.site/api/v1/fournisseurs/', { headers }),
+        fetch('https://www.emkit.site/api/v1/villes/', { headers })
       ]);
 
       if (resSubs.status === 401) {
@@ -96,7 +96,7 @@ const SubscribersPage = () => {
     if (!window.confirm('Supprimer cet abonné ?')) return;
     const token = localStorage.getItem('accessToken');
     try {
-      const res = await fetch(`https://www.emkit.site/abonnes/${id}/`, {
+      const res = await fetch(`https://www.emkit.site/api/v1/abonnes/${id}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -147,7 +147,7 @@ const SubscribersPage = () => {
         payload.ville_id = parseInt(ville, 10);
       }
 
-      const res = await fetch('https://www.emkit.site/abonnes/', {
+      const res = await fetch('https://www.emkit.site/api/v1/abonnes/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

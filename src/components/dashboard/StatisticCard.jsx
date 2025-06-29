@@ -35,8 +35,8 @@ const StatisticCard = ({ selectedSupplier }) => {
       try {
         const [abonnesRes, disjoncteursRes, actionsRes] = await Promise.all([
           fetch('https://www.emkit.site/api/v1/abonnes/', { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch('https://www.emkit.site/disjoncteurs/', { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch('https://www.emkit.site/actions/', { headers: { 'Authorization': `Bearer ${token}` } })
+          fetch('https://www.emkit.site/api/v1/disjoncteurs/', { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('https://www.emkit.site/api/v1/actions/', { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
 
         if (!abonnesRes.ok) throw new Error('Échec de la récupération des abonnés');
@@ -65,8 +65,8 @@ const StatisticCard = ({ selectedSupplier }) => {
         ];
 
         const consumptionUrl = selectedSupplier 
-          ? `https://www.emkit.site/stats/?supplier_id=${selectedSupplier}`
-          : `https://www.emkit.site/stats/`;
+          ? `https://www.emkit.site/api/v1/stats/?supplier_id=${selectedSupplier}`
+          : `https://www.emkit.site/api/v1/stats/`;
           
         const consumptionRes = await fetch(consumptionUrl, { headers: { 'Authorization': `Bearer ${token}` } });
         
@@ -108,7 +108,7 @@ const StatisticCard = ({ selectedSupplier }) => {
         supplier_id: selectedSupplier || ''
       });
       
-      const response = await fetch(`https://www.emkit.site/export-consumption/?${params.toString()}`, {
+      const response = await fetch(`https://www.emkit.site/api/v1/export-consumption/?${params.toString()}`, {
         headers: { 
           'Authorization': `Bearer ${token}`
         }
