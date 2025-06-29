@@ -29,7 +29,7 @@ const DisjoncteursPage = () => {
         const token = localStorage.getItem('accessToken');
         
         // Récupérer les informations de l'abonné
-        const abonneRes = await fetch(`http://localhost:8000/api/v1/abonnes/${id}/`, {
+        const abonneRes = await fetch(`https://www.emkit.site/abonnes/${id}/`, {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -45,7 +45,7 @@ const DisjoncteursPage = () => {
         setAbonneInfo(abonneData);
 
         // Récupérer les disjoncteurs de l'abonné
-        const disjoncteursRes = await fetch(`http://localhost:8000/api/v1/disjoncteurs/?abonne=${id}`, {
+        const disjoncteursRes = await fetch(`https://www.emkit.site/disjoncteurs/?abonne=${id}`, {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -62,7 +62,7 @@ const DisjoncteursPage = () => {
         setDisjoncteurs(disjoncteursData);
 
         // Récupérer les types d'équipement
-        const typesRes = await fetch('http://localhost:8000/api/v1/typeequipements/', {
+        const typesRes = await fetch('https://www.emkit.site/typeequipements/', {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -135,8 +135,8 @@ const DisjoncteursPage = () => {
     const token = localStorage.getItem('accessToken');
     const method = currentDisjoncteur ? 'PUT' : 'POST';
     const url = currentDisjoncteur 
-      ? `http://localhost:8000/api/v1/disjoncteurs/${currentDisjoncteur.id}/`
-      : 'http://localhost:8000/api/v1/disjoncteurs/';
+      ? `https://www.emkit.site/disjoncteurs/${currentDisjoncteur.id}/`
+      : 'https://www.emkit.site/disjoncteurs/';
     
     // Préparer les données avec les bons types
     const payload = {
@@ -177,7 +177,7 @@ const DisjoncteursPage = () => {
       }
 
       // Recharger les données
-      const disjoncteursRes = await fetch(`http://localhost:8000/api/v1/disjoncteurs/?abonne=${id}`, {
+      const disjoncteursRes = await fetch(`https://www.emkit.site/disjoncteurs/?abonne=${id}`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -208,7 +208,7 @@ const DisjoncteursPage = () => {
     
     const token = localStorage.getItem('accessToken');
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/disjoncteurs/${disjoncteurId}/`, {
+      const response = await fetch(`https://www.emkit.site/disjoncteurs/${disjoncteurId}/`, {
         method: 'DELETE',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -235,7 +235,7 @@ const DisjoncteursPage = () => {
     const newState = disjoncteur.current_state === 'ON' ? 'OFF' : 'ON';
     
     try {
-      const response = await fetch(`https://www.emkit.site/api/v1/disjoncteurs/${disjoncteur.id}/control/`, {
+      const response = await fetch(`https://www.emkit.site/disjoncteurs/${disjoncteur.id}/control/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

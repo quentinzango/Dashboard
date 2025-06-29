@@ -48,7 +48,7 @@ const LayoutComponent = () => {
     const headers = getAuthHeaders();
     if (!headers) return;
     try {
-      const res = await fetch('https://www.emkit.site/api/v1/fournisseurs/', { headers });
+      const res = await fetch('https://www.emkit.site/fournisseurs/', { headers });
       if (!res.ok) throw new Error('Échec récupération fournisseurs');
       setSuppliers(await res.json());
     } catch (e) {
@@ -66,19 +66,19 @@ const LayoutComponent = () => {
     }
     try {
       // a) Compteurs
-      const metersRes = await fetch('https://www.emkit.site/api/v1/disjoncteurs/', { headers });
+      const metersRes = await fetch('https://www.emkit.site/disjoncteurs/', { headers });
       const meters = await metersRes.json();
       setConnectedMeters(meters.filter(m => m.current_state === 'ON').length);
       setDisconnectedMeters(meters.filter(m => m.current_state === 'OFF').length);
 
       // b) Abonnés
-      const subsRes = await fetch('https://www.emkit.site/api/v1/abonnes/', { headers });
+      const subsRes = await fetch('https://www.emkit.site/abonnes/', { headers });
       const subs = await subsRes.json();
       setSubscribersCount(subs.length);
 
       // c) SMS pour le mois courant
       const currentMonth = new Date().getMonth() + 1;
-      const smsRes = await fetch(`https://www.emkit.site/api/v1/actions/?date__month=${currentMonth}`, { headers });
+      const smsRes = await fetch(`https://www.emkit.site/actions/?date__month=${currentMonth}`, { headers });
       const smsData = await smsRes.json();
       setSmsCount(smsData.length);
 
@@ -100,7 +100,7 @@ const LayoutComponent = () => {
       if (selectedSupplier) params.append('supplier_id', selectedSupplier);
 
       console.log('Fetching total consumption for', params.toString());
-      const res = await fetch(`https://www.emkit.site/api/v1/total/?${params}`, { headers });
+      const res = await fetch(`https://www.emkit.site/total/?${params}`, { headers });
       if (!res.ok) throw new Error('Échec récupération conso totale');
       const { total_consumption } = await res.json();
       setTotalConsumption(total_consumption);
@@ -136,7 +136,7 @@ const LayoutComponent = () => {
     const headers = getAuthHeaders();
     if (!headers) return;
     try {
-      const smsRes = await fetch(`https://www.emkit.site/api/v1/actions/?date__month=${m}`, { headers });
+      const smsRes = await fetch(`https://www.emkit.site/actions/?date__month=${m}`, { headers });
       const smsData = await smsRes.json();
       setSmsCount(smsData.length);
     } catch (e) {

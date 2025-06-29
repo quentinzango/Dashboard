@@ -20,7 +20,7 @@ const AccountsPage = () => {
       return;
     }
     try {
-      const res = await fetch('https://www.emkit.site/api/v1/comptes/', {
+      const res = await fetch('https://www.emkit.site/comptes/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Erreur récupération comptes');
