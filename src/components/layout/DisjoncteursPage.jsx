@@ -235,7 +235,7 @@ const DisjoncteursPage = () => {
     const newState = disjoncteur.current_state === 'ON' ? 'OFF' : 'ON';
     
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/disjoncteurs/${disjoncteur.id}/control/`, {
+      const response = await fetch(`https://www.emkit.site/api/v1/disjoncteurs/${disjoncteur.id}/control/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

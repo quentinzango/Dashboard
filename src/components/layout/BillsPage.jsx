@@ -23,7 +23,7 @@ const BillsPage = () => {
     }
 
     try {
-      let url = 'http://localhost:8000/api/v1/factures/';
+      let url = 'https://www.emkit.site/api/v1/factures/';
       if (filter !== 'all') url += `?statut=${filter}`;
 
       const response = await fetch(url, {
@@ -50,7 +50,7 @@ const BillsPage = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/v1/factures/${billId}/pay/`,
+        `https://www.emkit.site/api/v1/factures/${billId}/pay/`,
         {
           method: 'POST',
           headers: {

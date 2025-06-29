@@ -20,7 +20,7 @@ const SuppliersPage = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) { navigate('/login'); return; }
 
-      const res = await fetch('http://localhost:8000/api/v1/fournisseurs/', {
+      const res = await fetch('https://www.emkit.site/api/v1/fournisseurs/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.status === 401) {
@@ -53,7 +53,7 @@ const SuppliersPage = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) { navigate('/login'); return; }
 
-      const res = await fetch('http://localhost:8000/api/v1/fournisseurs/', {
+      const res = await fetch('https://www.emkit.site/api/v1/fournisseurs/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(newSupplier)
@@ -76,7 +76,7 @@ const SuppliersPage = () => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) { navigate('/login'); return; }
-      const res = await fetch(`http://localhost:8000/api/v1/fournisseurs/${id}/`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`https://www.emkit.site/api/v1/fournisseurs/${id}/`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (!res.ok) throw new Error();
       setSuppliers(prev => prev.filter(s => s.id !== id));
     } catch (err) {
