@@ -159,7 +159,7 @@ const InvoiceTemplate = ({ bill }) => {
   // Fonction pour récupérer le logo du fournisseur
   const getSupplierLogo = () => {
     if (bill.abonne?.fournisseur_energie?.logo) {
-      return `http://localhost:8000${bill.abonne.fournisseur_energie.logo}`;
+      return `https://www.emkit.site${bill.abonne.fournisseur_energie.logo}`;
     }
     return null;
   };

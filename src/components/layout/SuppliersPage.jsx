@@ -22,7 +22,7 @@ const SuppliersPage = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) { navigate('/login'); return; }
 
-      const res = await fetch('http://localhost:8000/api/v1/fournisseurs/', {
+      const res = await fetch('https://www.emkit.site/api/v1/fournisseurs/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -74,7 +74,7 @@ const SuppliersPage = () => {
         formData.append('logo', newSupplier.logo);
       }
 
-      const res = await fetch('http://localhost:8000/api/v1/fournisseurs/', {
+      const res = await fetch('https://www.emkit.site/api/v1/fournisseurs/', {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}` 
@@ -104,7 +104,7 @@ const SuppliersPage = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) { navigate('/login'); return; }
       
-      const res = await fetch(`http://localhost:8000/api/v1/fournisseurs/${id}/`, { 
+      const res = await fetch(`https://www.emkit.site/api/v1/fournisseurs/${id}/`, { 
         method: 'DELETE', 
         headers: { 'Authorization': `Bearer ${token}` } 
       });
@@ -278,7 +278,7 @@ const SuppliersPage = () => {
                       <td className="px-6 py-4">
                         {s.logo ? (
                           <img 
-                            src={`http://localhost:8000${s.logo}`} 
+                            src={`https://www.emkit.site${s.logo}`} 
                             alt="Logo" 
                             className="h-10 w-10 object-contain"
                           />

@@ -25,7 +25,7 @@ const UsersPage = () => {
 
     try {
       // Récupérer l'utilisateur connecté
-      const userRes = await fetch('http://localhost:8000/api/v1/auth/users/me/', {
+      const userRes = await fetch('https://www.emkit.site/api/v1/auth/users/me/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const userData = await userRes.json();
@@ -35,7 +35,7 @@ const UsersPage = () => {
 
       // Récupérer le fournisseur selon le rôle
       if (userData.role === 'administrateur') {
-        const adminRes = await fetch(`http://localhost:8000/api/v1/administrateurs/?utilisateur=${userData.id}`, {
+        const adminRes = await fetch(`https://www.emkit.site/api/v1/administrateurs/?utilisateur=${userData.id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const adminData = await adminRes.json();
@@ -43,16 +43,16 @@ const UsersPage = () => {
         const admin = admins.length > 0 ? admins[0] : null;
         
         if (admin?.fournisseur_energie) {
-          const supplierRes = await fetch(`http://localhost:8000/api/v1/fournisseurs/${admin.fournisseur_energie}/`, {
+          const supplierRes = await fetch(`https://www.emkit.site/api/v1/fournisseurs/${admin.fournisseur_energie}/`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const supplierData = await supplierRes.json();
-          logoUrl = `http://localhost:8000${supplierData.logo}`;
+          logoUrl = `https://www.emkit.site${supplierData.logo}`;
           supplierName = supplierData.nom;
         }
       } 
       else if (userData.role === 'technicien') {
-        const techRes = await fetch(`http://localhost:8000/api/v1/techniciens/?utilisateur=${userData.id}`, {
+        const techRes = await fetch(`https://www.emkit.site/api/v1/techniciens/?utilisateur=${userData.id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const techData = await techRes.json();
@@ -60,11 +60,11 @@ const UsersPage = () => {
         const tech = techs.length > 0 ? techs[0] : null;
         
         if (tech?.fournisseur_energie) {
-          const supplierRes = await fetch(`http://localhost:8000/api/v1/fournisseurs/${tech.fournisseur_energie}/`, {
+          const supplierRes = await fetch(`https://www.emkit.site/api/v1/fournisseurs/${tech.fournisseur_energie}/`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const supplierData = await supplierRes.json();
-          logoUrl = `http://localhost:8000${supplierData.logo}`;
+          logoUrl = `https://www.emkit.site${supplierData.logo}`;
           supplierName = supplierData.nom;
         }
       }
@@ -288,7 +288,7 @@ const UsersPage = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Vous devez vous connecter.');
 
-      const res = await fetch('http://localhost:8000/api/v1/auth/users/', {
+      const res = await fetch('https://www.emkit.site/api/v1/auth/users/', {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -328,7 +328,7 @@ const UsersPage = () => {
         return;
       }
 
-      const res = await fetch(`http://localhost:8000/api/v1/auth/users/${userId}/`, {
+      const res = await fetch(`https://www.emkit.site/api/v1/auth/users/${userId}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -357,7 +357,7 @@ const UsersPage = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Vous devez vous connecter.');
 
-      const res = await fetch('http://localhost:8000/api/v1/auth/register/', {
+      const res = await fetch('https://www.emkit.site/api/v1/auth/register/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

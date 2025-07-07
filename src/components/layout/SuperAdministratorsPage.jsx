@@ -25,10 +25,10 @@ const SuperAdministratorsPage = () => {
         if (!token) { navigate('/login'); return; }
 
         const [saRes, usersRes] = await Promise.all([
-          fetch('http://localhost:8000/api/v1/superadministrateurs/', {
+          fetch('https://www.emkit.site/api/v1/superadministrateurs/', {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          fetch('http://localhost:8000/api/v1/auth/users/', {
+          fetch('https://www.emkit.site/api/v1/auth/users/', {
             headers: { Authorization: `Bearer ${token}` }
           })
         ]);
@@ -84,7 +84,7 @@ const SuperAdministratorsPage = () => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) { navigate('/login'); return; }
-      const res = await fetch('http://localhost:8000/api/v1/superadministrateurs/', {
+      const res = await fetch('https://www.emkit.site/api/v1/superadministrateurs/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

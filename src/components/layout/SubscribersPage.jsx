@@ -40,7 +40,7 @@ const SubscribersPage = () => {
     const headers = { 'Authorization': `Bearer ${token}` };
     
     try {
-      const res = await fetch('http://localhost:8000/api/v1/auth/users/me/', { headers });
+      const res = await fetch('https://www.emkit.site/api/v1/auth/users/me/', { headers });
       if (res.ok) {
         return await res.json();
       }
@@ -70,10 +70,10 @@ const SubscribersPage = () => {
       // Si l'utilisateur est un abonné, charger uniquement ses données
       if (profile?.role === 'abonne') {
         const [resSub, resUser, resSuppliers, resCities] = await Promise.all([
-          fetch(`http://localhost:8000/api/v1/abonnes/${profile.abonne_id}/`, { headers }),
-          fetch('http://localhost:8000/api/v1/auth/users/', { headers }),
-          fetch('http://localhost:8000/api/v1/fournisseurs/', { headers }),
-          fetch('http://localhost:8000/api/v1/villes/', { headers })
+          fetch(`https://www.emkit.site/api/v1/abonnes/${profile.abonne_id}/`, { headers }),
+          fetch('https://www.emkit.site/api/v1/auth/users/', { headers }),
+          fetch('https://www.emkit.site/api/v1/fournisseurs/', { headers }),
+          fetch('https://www.emkit.site/api/v1/villes/', { headers })
         ]);
 
         if (resSub.status === 401) {
@@ -89,10 +89,10 @@ const SubscribersPage = () => {
       } else {
         // Pour les techniciens et administrateurs
         const [resSubs, resUsers, resSuppliers, resCities] = await Promise.all([
-          fetch('http://localhost:8000/api/v1/abonnes/', { headers }),
-          fetch('http://localhost:8000/api/v1/auth/users/', { headers }),
-          fetch('http://localhost:8000/api/v1/fournisseurs/', { headers }),
-          fetch('http://localhost:8000/api/v1/villes/', { headers })
+          fetch('https://www.emkit.site/api/v1/abonnes/', { headers }),
+          fetch('https://www.emkit.site/api/v1/auth/users/', { headers }),
+          fetch('https://www.emkit.site/api/v1/fournisseurs/', { headers }),
+          fetch('https://www.emkit.site/api/v1/villes/', { headers })
         ]);
 
         if (resSubs.status === 401) {
@@ -120,7 +120,7 @@ const SubscribersPage = () => {
       const subscribersWithBreakers = await Promise.all(dataSubs.map(async a => {
         try {
           const resBreakers = await fetch(
-            `http://localhost:8000/api/v1/disjoncteurs/?abonne=${a.id}`,
+            `https://www.emkit.site/api/v1/disjoncteurs/?abonne=${a.id}`,
             { headers }
           );
           const breakers = resBreakers.ok ? await resBreakers.json() : [];
@@ -170,7 +170,7 @@ const SubscribersPage = () => {
     if (!window.confirm('Supprimer cet abonné ?')) return;
     const token = localStorage.getItem('accessToken');
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/abonnes/${id}/`, {
+      const res = await fetch(`https://www.emkit.site/api/v1/abonnes/${id}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -223,7 +223,7 @@ const SubscribersPage = () => {
         payload.ville_id = parseInt(ville, 10);
       }
 
-      const res = await fetch('http://localhost:8000/api/v1/abonnes/', {
+      const res = await fetch('https://www.emkit.site/api/v1/abonnes/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

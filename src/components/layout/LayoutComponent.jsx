@@ -39,7 +39,7 @@ const LayoutComponent = () => {
     const headers = getAuthHeaders();
     if (!headers) return;
     try {
-      const res = await fetch('http://localhost:8000/api/v1/fournisseurs/', { headers });
+      const res = await fetch('https://www.emkit.site/api/v1/fournisseurs/', { headers });
       if (!res.ok) throw new Error('Échec récupération fournisseurs');
       setSuppliers(await res.json());
     } catch (e) {
@@ -56,17 +56,17 @@ const LayoutComponent = () => {
       return;
     }
     try {
-      const metersRes = await fetch('http://localhost:8000/api/v1/disjoncteurs/', { headers });
+      const metersRes = await fetch('https://www.emkit.site/api/v1/disjoncteurs/', { headers });
       const meters = await metersRes.json();
       setConnectedMeters(meters.filter(m => m.current_state === 'ON').length);
       setDisconnectedMeters(meters.filter(m => m.current_state === 'OFF').length);
 
-      const subsRes = await fetch('http://localhost:8000/api/v1/abonnes/', { headers });
+      const subsRes = await fetch('https://www.emkit.site/api/v1/abonnes/', { headers });
       const subs = await subsRes.json();
       setSubscribersCount(subs.length);
 
       const currentMonth = new Date().getMonth() + 1;
-      const smsRes = await fetch(`http://localhost:8000/api/v1/actions/?date__month=${currentMonth}`, { headers });
+      const smsRes = await fetch(`https://www.emkit.site/api/v1/actions/?date__month=${currentMonth}`, { headers });
       setSmsCount((await smsRes.json()).length);
 
       setLastUpdate(new Date());
@@ -84,7 +84,7 @@ const LayoutComponent = () => {
     try {
       const params = new URLSearchParams({ date: selectedDate });
       if (selectedSupplier) params.append('supplier_id', selectedSupplier);
-      const res = await fetch(`http://localhost:8000/api/v1/total/?${params}`, { headers });
+      const res = await fetch(`https://www.emkit.site/api/v1/total/?${params}`, { headers });
       const { total_consumption } = await res.json();
       setTotalConsumption(total_consumption);
     } catch (e) {
@@ -112,7 +112,7 @@ const LayoutComponent = () => {
     const headers = getAuthHeaders();
     if (!headers) return;
     try {
-      const smsRes = await fetch(`http://localhost:8000/api/v1/actions/?date__month=${m}`, { headers });
+      const smsRes = await fetch(`https://www.emkit.site/api/v1/actions/?date__month=${m}`, { headers });
       setSmsCount((await smsRes.json()).length);
     } catch (e) {
       console.error(e);

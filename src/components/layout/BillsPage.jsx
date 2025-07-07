@@ -19,7 +19,7 @@ const BillsPage = () => {
       if (!token) return;
       
       try {
-        const userRes = await fetch('http://localhost:8000/api/v1/auth/users/me/', {
+        const userRes = await fetch('https://www.emkit.site/api/v1/auth/users/me/', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -32,7 +32,7 @@ const BillsPage = () => {
           setUserRole('admin');
           
           const adminRes = await fetch(
-            `http://localhost:8000/api/v1/administrateurs/${userData.administrateur}/`, 
+            `https://www.emkit.site/api/v1/administrateurs/${userData.administrateur}/`, 
             {
               headers: { 'Authorization': `Bearer ${token}` }
             }
@@ -75,7 +75,7 @@ const BillsPage = () => {
         params.append('abonne', 'me');
       }
       
-      const url = `http://localhost:8000/api/v1/factures/?${params.toString()}`;
+      const url = `https://www.emkit.site/api/v1/factures/?${params.toString()}`;
       
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -107,7 +107,7 @@ const BillsPage = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/v1/factures/${billId}/pay/`,
+        `https://www.emkit.site/api/v1/factures/${billId}/pay/`,
         {
           method: 'POST',
           headers: {

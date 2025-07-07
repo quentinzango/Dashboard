@@ -33,7 +33,7 @@ const TechniciansPage = () => {
     const headers = { 'Authorization': `Bearer ${token}` };
     
     try {
-      const res = await fetch('http://localhost:8000/api/v1/auth/users/me/', { headers });
+      const res = await fetch('https://www.emkit.site/api/v1/auth/users/me/', { headers });
       if (res.ok) {
         return await res.json();
       }
@@ -55,10 +55,10 @@ const TechniciansPage = () => {
       setUserProfile(profile);
 
       const [resTechs, resUsers, resAdmins, resSuperAdmins] = await Promise.all([
-        fetch('http://localhost:8000/api/v1/techniciens/', { headers }),
-        fetch('http://localhost:8000/api/v1/auth/users/', { headers }),
-        fetch('http://localhost:8000/api/v1/administrateurs/', { headers }),
-        fetch('http://localhost:8000/api/v1/superadministrateurs/', { headers })
+        fetch('https://www.emkit.site/api/v1/techniciens/', { headers }),
+        fetch('https://www.emkit.site/api/v1/auth/users/', { headers }),
+        fetch('https://www.emkit.site/api/v1/administrateurs/', { headers }),
+        fetch('https://www.emkit.site/api/v1/superadministrateurs/', { headers })
       ]);
 
       if (resTechs.status === 401) {
@@ -148,7 +148,7 @@ const TechniciansPage = () => {
     if (!window.confirm('Supprimer ce technicien ?')) return;
     const token = localStorage.getItem('accessToken');
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/techniciens/${id}/`, {
+      const res = await fetch(`https://www.emkit.site/api/v1/techniciens/${id}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -206,7 +206,7 @@ const TechniciansPage = () => {
         payload.super_administrateur = parseInt(super_administrateur, 10);
       }
 
-      const res = await fetch('http://localhost:8000/api/v1/techniciens/', {
+      const res = await fetch('https://www.emkit.site/api/v1/techniciens/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -15,7 +15,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const handleLogout = async () => {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
-      await fetch('http://localhost:8000/auth/logout/', {
+      await fetch('https://www.emkit.site/api/v1/auth/logout/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

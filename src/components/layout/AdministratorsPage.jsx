@@ -31,7 +31,7 @@ const AdministratorsPage = () => {
         }
 
         // Fetch users
-        const usersRes = await fetch('http://localhost:8000/api/v1/auth/users/', {
+        const usersRes = await fetch('https://www.emkit.site/api/v1/auth/users/', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!usersRes.ok) throw new Error('Failed to fetch users');
@@ -39,7 +39,7 @@ const AdministratorsPage = () => {
         setUsers(usersData);
 
         // Fetch super admins
-        const superAdminsRes = await fetch('http://localhost:8000/api/v1/superadministrateurs/', {
+        const superAdminsRes = await fetch('https://www.emkit.site/api/v1/superadministrateurs/', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!superAdminsRes.ok) throw new Error('Failed to fetch super admins');
@@ -51,7 +51,7 @@ const AdministratorsPage = () => {
         setSuperAdmins(processedSuperAdmins);
 
         // Fetch energy suppliers
-        const suppliersRes = await fetch('http://localhost:8000/api/v1/fournisseurs/', {
+        const suppliersRes = await fetch('https://www.emkit.site/api/v1/fournisseurs/', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!suppliersRes.ok) throw new Error('Failed to fetch energy suppliers');
@@ -59,7 +59,7 @@ const AdministratorsPage = () => {
         setEnergySuppliers(suppliersData);
 
         // Fetch administrators
-        const adminsRes = await fetch('http://localhost:8000/api/v1/administrateurs/', {
+        const adminsRes = await fetch('https://www.emkit.site/api/v1/administrateurs/', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!adminsRes.ok) throw new Error('Failed to fetch administrators');
@@ -134,7 +134,7 @@ const AdministratorsPage = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:8000/api/v1/administrateurs/', {
+      const response = await fetch('https://www.emkit.site/api/v1/administrateurs/', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -186,7 +186,7 @@ const AdministratorsPage = () => {
           return;
         }
           
-        const response = await fetch(`http://localhost:8000/api/v1/administrateurs/${id}/`, {
+        const response = await fetch(`https://www.emkit.site/api/v1/administrateurs/${id}/`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`
