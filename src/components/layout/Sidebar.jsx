@@ -6,7 +6,7 @@ import {
   HiOutlineUserCircle, HiOutlineDocumentText
 } from 'react-icons/hi';
 import { MdElectricalServices } from 'react-icons/md';
-import { FaUserPlus, FaBolt, FaUserShield, FaCrown } from 'react-icons/fa';
+import { FaUserPlus, FaBolt, FaUserShield, FaCrown, FaWrench} from 'react-icons/fa';
 import { NavLink, useNavigate } from 'react-router-dom';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
@@ -15,7 +15,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const handleLogout = async () => {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
-      await fetch('https://www.emkit.site/auth/logout/', {
+      await fetch('http://localhost:8000/auth/logout/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,7 +40,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     { label: "Subscribers",         icon: <FaUserPlus className="text-xl" />,           path: "/dashboard/subscribers" },
     { label: "Accounts",            icon: <HiOutlineUserCircle className="text-xl" />,  path: "/dashboard/accounts" },
     { label: "Bills",               icon: <HiOutlineDocumentText className="text-xl" />, path: "/dashboard/bills" },
+    { label: "Billings",               icon: <HiOutlineDocumentText className="text-xl" />, path: "/dashboard/billings" },
     { label: "Equipements",         icon: <MdElectricalServices className="text-xl" />, path: "/dashboard/equipements" },
+    { label: "Technicians",         icon: <FaWrench className="text-xl" />, path: "/dashboard/technicians" },
     { label: "Map",                 icon: <HiTruck className="text-xl" />,              path: "/dashboard/map" },
     { label: "Sign out",            icon: <HiOutlineLogout className="text-xl" />,      action: handleLogout },
   ];

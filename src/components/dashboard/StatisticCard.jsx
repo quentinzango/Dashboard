@@ -23,8 +23,8 @@ const StatisticCard = ({ selectedSupplier }) => {
   const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7));
   const [exporting, setExporting] = useState(false);
   
-  const MAX_ABONNES = 10000;
-  const MAX_DISJONCTEURS = 10000;
+  const MAX_ABONNES = 5000000;
+  const MAX_DISJONCTEURS = 400000000;
   const MAX_ACTIONS = 50000;
   
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
@@ -34,9 +34,9 @@ const StatisticCard = ({ selectedSupplier }) => {
       const token = localStorage.getItem('accessToken');
       try {
         const [abonnesRes, disjoncteursRes, actionsRes] = await Promise.all([
-          fetch('https://www.emkit.site/api/v1/abonnes/', { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch('https://www.emkit.site/api/v1/disjoncteurs/', { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch('https://www.emkit.site/api/v1/actions/', { headers: { 'Authorization': `Bearer ${token}` } })
+          fetch('http://localhost:8000/api/v1/abonnes/', { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('http://localhost:8000/api/v1/disjoncteurs/', { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('http://localhost:8000/api/v1/actions/', { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
 
         if (!abonnesRes.ok) throw new Error('Échec de la récupération des abonnés');
@@ -65,8 +65,8 @@ const StatisticCard = ({ selectedSupplier }) => {
         ];
 
         const consumptionUrl = selectedSupplier 
-          ? `https://www.emkit.site/api/v1/stats/?supplier_id=${selectedSupplier}`
-          : `https://www.emkit.site/api/v1/stats/`;
+          ? `http://localhost:8000/api/v1/stats/?supplier_id=${selectedSupplier}`
+          : `http://localhost:8000/api/v1/stats/`;
           
         const consumptionRes = await fetch(consumptionUrl, { headers: { 'Authorization': `Bearer ${token}` } });
         
@@ -108,7 +108,7 @@ const StatisticCard = ({ selectedSupplier }) => {
         supplier_id: selectedSupplier || ''
       });
       
-      const response = await fetch(`https://www.emkit.site/api/v1/export-consumption/?${params.toString()}`, {
+      const response = await fetch(`http://localhost:8000/api/v1/export-consumption/?${params.toString()}`, {
         headers: { 
           'Authorization': `Bearer ${token}`
         }

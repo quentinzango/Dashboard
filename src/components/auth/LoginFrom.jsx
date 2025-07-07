@@ -14,9 +14,9 @@ const LoginForm = () => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
+    //'https://www.emkit.site/api/v1/typeequipements/';
     try {
-      const res = await fetch('https://www.emkit.site/api/v1/auth/login/', {
+      const res = await fetch('http://localhost:8000/api/v1/auth/login/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

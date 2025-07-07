@@ -20,7 +20,7 @@ const KnowledgeBase = ({
       <div className="bg-blue-100 rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="text-lg font-semibold text-gray-700">Compteurs Connectés</h3>
+            <h3 className="text-lg font-semibold text-gray-700">Disjoncteurs Connectés</h3>
             <p className="text-3xl font-bold mt-2">
               {connectedMeters}
               <span className="text-xs ml-1 text-gray-500">en temps réel</span>
@@ -38,7 +38,7 @@ const KnowledgeBase = ({
       <div className="bg-red-100 rounded-xl shadow-sm p-6 border-l-4 border-red-500">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="text-lg font-semibold text-gray-700">Compteurs Hors service</h3>
+            <h3 className="text-lg font-semibold text-gray-700">Disjoncteurs Hors service</h3>
             <p className="text-3xl font-bold mt-2">
               {disconnectedMeters}
               <span className="text-xs ml-1 text-gray-500">en temps réel</span>

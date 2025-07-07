@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiSearch } from 'react-icons/fi';
+import { 
+  FiSearch, 
+  FiMail, 
+  FiHome, 
+  FiMapPin, 
+  FiZap, 
+  FiEye, 
+  FiEdit2, 
+  FiTrash2, 
+  FiPlus,
+  FiChevronLeft,
+  FiChevronRight
+} from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
 const SubscribersPage = () => {
@@ -19,9 +31,25 @@ const SubscribersPage = () => {
   });
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
   const perPage = 5;
 
-  // 1) Fetch de toutes les données
+  const fetchUserProfile = useCallback(async () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return null;
+    const headers = { 'Authorization': `Bearer ${token}` };
+    
+    try {
+      const res = await fetch('http://localhost:8000/api/v1/auth/users/me/', { headers });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.error("Erreur lors de la récupération du profil", e);
+    }
+    return null;
+  }, []);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -30,42 +58,90 @@ const SubscribersPage = () => {
     const headers = { 'Authorization': `Bearer ${token}` };
 
     try {
-      const [resSubs, resUsers, resSupp, resCities] = await Promise.all([
-        fetch('https://www.emkit.site/api/v1/abonnes/', { headers }),
-        fetch('https://www.emkit.site/api/v1/auth/users/', { headers }),
-        fetch('https://www.emkit.site/api/v1/fournisseurs/', { headers }),
-        fetch('https://www.emkit.site/api/v1/villes/', { headers })
-      ]);
+      // Récupérer le profil utilisateur
+      const profile = await fetchUserProfile();
+      setUserProfile(profile);
 
-      if (resSubs.status === 401) {
-        localStorage.removeItem('accessToken');
-        return navigate('/login');
+      let dataSubs = [];
+      let dataUsers = [];
+      let dataSupp = [];
+      let dataCities = [];
+
+      // Si l'utilisateur est un abonné, charger uniquement ses données
+      if (profile?.role === 'abonne') {
+        const [resSub, resUser, resSuppliers, resCities] = await Promise.all([
+          fetch(`http://localhost:8000/api/v1/abonnes/${profile.abonne_id}/`, { headers }),
+          fetch('http://localhost:8000/api/v1/auth/users/', { headers }),
+          fetch('http://localhost:8000/api/v1/fournisseurs/', { headers }),
+          fetch('http://localhost:8000/api/v1/villes/', { headers })
+        ]);
+
+        if (resSub.status === 401) {
+          localStorage.removeItem('accessToken');
+          return navigate('/login');
+        }
+        if (!resSub.ok) throw new Error('Impossible de charger votre abonnement');
+
+        dataSubs = [await resSub.json()];
+        dataUsers = await resUser.json();
+        dataSupp = await resSuppliers.json();
+        dataCities = await resCities.json();
+      } else {
+        // Pour les techniciens et administrateurs
+        const [resSubs, resUsers, resSuppliers, resCities] = await Promise.all([
+          fetch('http://localhost:8000/api/v1/abonnes/', { headers }),
+          fetch('http://localhost:8000/api/v1/auth/users/', { headers }),
+          fetch('http://localhost:8000/api/v1/fournisseurs/', { headers }),
+          fetch('http://localhost:8000/api/v1/villes/', { headers })
+        ]);
+
+        if (resSubs.status === 401) {
+          localStorage.removeItem('accessToken');
+          return navigate('/login');
+        }
+        if (!resSubs.ok) throw new Error('Impossible de charger les abonnés');
+
+        dataSubs = await resSubs.json();
+        dataUsers = await resUsers.json();
+        dataSupp = await resSuppliers.json();
+        dataCities = await resCities.json();
       }
-      if (!resSubs.ok) throw new Error('Impossible de charger les abonnés');
-
-      const [dataSubs, dataUsers, dataSupp, dataCities] = await Promise.all([
-        resSubs.json(),
-        resUsers.json(),
-        resSupp.json(),
-        resCities.json(),
-      ]);
 
       setUsers(dataUsers);
       setSuppliers(dataSupp);
       setCities(dataCities);
 
-      // Créer un mapping des villes par ID pour une recherche rapide
       const cityMap = {};
       dataCities.forEach(city => {
         cityMap[city.id] = city.nom;
       });
 
-      // Formatage des abonnés avec résolution du nom de ville
-      setSubscribers(dataSubs.map(a => ({
+      // Charger les disjoncteurs pour chaque abonné
+      const subscribersWithBreakers = await Promise.all(dataSubs.map(async a => {
+        try {
+          const resBreakers = await fetch(
+            `http://localhost:8000/api/v1/disjoncteurs/?abonne=${a.id}`,
+            { headers }
+          );
+          const breakers = resBreakers.ok ? await resBreakers.json() : [];
+          return {
+            ...a,
+            breakers
+          };
+        } catch {
+          return {
+            ...a,
+            breakers: []
+          };
+        }
+      }));
+
+      setSubscribers(subscribersWithBreakers.map(a => ({
         id: a.id,
         user: a.utilisateur?.email || '—',
         supplier: a.fournisseur_energie?.nom || '—',
-        city: a.ville ? cityMap[a.ville] || '—' : '—'
+        city: a.ville ? cityMap[a.ville] || '—' : '—',
+        breakers: a.breakers || []  // Ajout des disjoncteurs
       })));
     } catch (e) {
       console.error(e);
@@ -73,13 +149,12 @@ const SubscribersPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, [navigate, fetchUserProfile]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // 2) Filtrage et pagination
   const filtered = subscribers.filter(s =>
     (s.user || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (s.supplier || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -91,12 +166,11 @@ const SubscribersPage = () => {
     currentPage * perPage
   );
 
-  // 3) Suppression
   const handleDelete = async id => {
     if (!window.confirm('Supprimer cet abonné ?')) return;
     const token = localStorage.getItem('accessToken');
     try {
-      const res = await fetch(`https://www.emkit.site/api/v1/abonnes/${id}/`, {
+      const res = await fetch(`http://localhost:8000/api/v1/abonnes/${id}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -107,20 +181,21 @@ const SubscribersPage = () => {
     }
   };
 
-  // 4) Toggle formulaire
   const handleAddToggle = () => {
     setError(null);
-    setNewSub({ utilisateur: '', fournisseur_energie: '', ville: '' });
+    setNewSub({ 
+      utilisateur: '', 
+      fournisseur_energie: userProfile?.technicien_fournisseur_id || '',
+      ville: '' 
+    });
     setIsAdding(true);
   };
 
-  // 5) Bind form
   const handleNewChange = e => {
     const { name, value } = e.target;
     setNewSub(ns => ({ ...ns, [name]: value }));
   };
 
-  // 6) Soumission ajout avec correction du problème 400
   const handleAddSubmit = async e => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -128,7 +203,6 @@ const SubscribersPage = () => {
     
     const { utilisateur, fournisseur_energie, ville } = newSub;
     
-    // Validation des champs requis (ville est optionnelle)
     if (!utilisateur || !fournisseur_energie) {
       setIsSubmitting(false);
       return setError('Les champs utilisateur et fournisseur sont requis');
@@ -136,18 +210,20 @@ const SubscribersPage = () => {
 
     const token = localStorage.getItem('accessToken');
     try {
-      // CORRECTION : Formatage des données avec les noms de champs corrects
       const payload = {
         utilisateur_id: parseInt(utilisateur, 10),
         fournisseur_energie_id: parseInt(fournisseur_energie, 10),
       };
+
+      if (userProfile?.technicien_id) {
+        payload.technicien_id = userProfile.technicien_id;
+      }
       
-      // Ajout optionnel de la ville
       if (ville) {
         payload.ville_id = parseInt(ville, 10);
       }
 
-      const res = await fetch('https://www.emkit.site/api/v1/abonnes/', {
+      const res = await fetch('http://localhost:8000/api/v1/abonnes/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -156,25 +232,19 @@ const SubscribersPage = () => {
         body: JSON.stringify(payload)
       });
 
-      // Gestion des erreurs de l'API
       if (!res.ok) {
         const errorData = await res.json();
         let errorMessage = 'Échec de la création';
-        
-        // Extraction des messages d'erreur détaillés
         if (errorData) {
-          // CORRECTION : Meilleure gestion des erreurs
           const errors = [];
           for (const field in errorData) {
             errors.push(`${field}: ${errorData[field].join(', ')}`);
           }
           errorMessage = errors.join(' | ');
         }
-        
         throw new Error(errorMessage);
       }
 
-      // Rafraîchissement des données
       await fetchData();
       setIsAdding(false);
     } catch (e) {
@@ -184,204 +254,337 @@ const SubscribersPage = () => {
     }
   };
 
+  // Masquer certaines fonctionnalités pour les abonnés
+  const isAbonne = userProfile?.role === 'abonne';
+  const showAddButton = !isAbonne && userProfile?.role !== 'abonne';
+  const showDeleteButton = !isAbonne;
+  const showEditButton = !isAbonne;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      {/* En-tête */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">List of Subscribers</h1>
-        <button
-          onClick={handleAddToggle}
-          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center"
-          disabled={isSubmitting}
-        >
-          + Add a Subscriber
-        </button>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {isAbonne ? "Mon Abonnement" : "Liste des Abonnés"}
+        </h1>
+        
+        {showAddButton && (
+          <button
+            onClick={handleAddToggle}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center transition-colors"
+            disabled={isSubmitting}
+          >
+            <FiPlus className="mr-1" /> Ajouter un Abonné
+          </button>
+        )}
       </div>
 
-      {/* Formulaire d'ajout inline */}
       {isAdding && (
-        <form onSubmit={handleAddSubmit} className="mb-6 p-4 bg-gray-50 rounded">
-          {error && <div className="mb-2 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Utilisateur *</label>
-              <select
-                name="utilisateur"
-                value={newSub.utilisateur}
-                onChange={handleNewChange}
-                className="w-full border px-3 py-2 rounded"
-                required
-                disabled={isSubmitting}
-              >
-                <option value="">Sélectionnez un utilisateur</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>{u.email}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fournisseur *</label>
-              <select
-                name="fournisseur_energie"
-                value={newSub.fournisseur_energie}
-                onChange={handleNewChange}
-                className="w-full border px-3 py-2 rounded"
-                required
-                disabled={isSubmitting}
-              >
-                <option value="">Sélectionnez un fournisseur</option>
-                {suppliers.map(s => (
-                  <option key={s.id} value={s.id}>{s.nom}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ville (Optionnel)</label>
-              <select
-                name="ville"
-                value={newSub.ville}
-                onChange={handleNewChange}
-                className="w-full border px-3 py-2 rounded"
-                disabled={isSubmitting}
-              >
-                <option value="">Sélectionnez une ville</option>
-                {cities.map(c => (
-                  <option key={c.id} value={c.id}>{c.nom}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="mt-4 space-x-3">
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border border-gray-100">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Ajouter un nouvel abonné</h2>
             <button 
-              type="submit" 
-              className={`px-4 py-2 text-white rounded ${
-                isSubmitting ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
-              }`}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Création en cours...' : 'Créer'}
-            </button>
-            <button 
-              type="button" 
               onClick={() => setIsAdding(false)} 
-              className="px-4 py-2 bg-gray-300 rounded"
-              disabled={isSubmitting}
+              className="text-gray-500 hover:text-gray-700"
             >
-              Annuler
+              &times;
             </button>
           </div>
-        </form>
+          
+          {error && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{error}</div>}
+          
+          <form onSubmit={handleAddSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-gray-700 text-sm font-medium mb-2">Utilisateur *</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <FiMail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <select
+                    name="utilisateur"
+                    value={newSub.utilisateur}
+                    onChange={handleNewChange}
+                    className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                    disabled={isSubmitting}
+                  >
+                    <option value="">Sélectionnez un utilisateur</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.email}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-gray-700 text-sm font-medium mb-2">Fournisseur *</label>
+                {userProfile?.role === 'technicien' ? (
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <FiHome className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      value={userProfile.technicien_fournisseur_nom || ''}
+                      className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-lg bg-gray-100"
+                      readOnly
+                    />
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <FiHome className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <select
+                      name="fournisseur_energie"
+                      value={newSub.fournisseur_energie}
+                      onChange={handleNewChange}
+                      className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Sélectionnez un fournisseur</option>
+                      {suppliers.map(s => (
+                        <option key={s.id} value={s.id}>{s.nom}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-gray-700 text-sm font-medium mb-2">Ville (Optionnel)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <FiMapPin className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <select
+                    name="ville"
+                    value={newSub.ville}
+                    onChange={handleNewChange}
+                    className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    disabled={isSubmitting}
+                  >
+                    <option value="">Sélectionnez une ville</option>
+                    {cities.map(c => (
+                      <option key={c.id} value={c.id}>{c.nom}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 mt-6">
+              <button 
+                type="submit" 
+                className={`px-4 py-2 text-white rounded-lg ${
+                  isSubmitting ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
+                } flex items-center transition-colors`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Création en cours...' : 'Créer'}
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setIsAdding(false)} 
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={isSubmitting}
+              >
+                Annuler
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
-      {/* Recherche & compteur */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="relative w-1/3">
-          <input
-            type="text"
-            placeholder="Search by user, supplier or city"
-            className="w-full px-4 py-2 pl-10 border rounded focus:ring-2 focus:ring-indigo-500"
-            value={searchTerm}
-            onChange={e => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <FiSearch className="h-5 w-5 text-gray-400" />
+      {!isAbonne && (
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div className="relative w-full">
+            <input
+              type="text"
+              placeholder="Rechercher par utilisateur, fournisseur ou ville"
+              className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={searchTerm}
+              onChange={e => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <FiSearch className="h-5 w-5 text-gray-400" />
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm w-full md:w-auto">
+            <h3 className="text-gray-500 text-sm">Total Abonnés</h3>
+            <p className="text-2xl font-bold text-indigo-600">{subscribers.length}</p>
           </div>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="text-gray-500">Total Subscribers</h3>
-          {/* Afficher le nombre réel d'abonnés */}
-          <p className="text-2xl font-bold">{subscribers.length}</p>
-        </div>
-      </div>
+      )}
 
-      {/* Tableau ou loader */}
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin w-12 h-12 border-t-2 border-b-2 border-indigo-500 rounded-full" />
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  {['User', 'Supplier', 'City', 'Actions'].map(c => (
-                    <th key={c} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      {c}
+                  {!isAbonne && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Utilisateur
                     </th>
-                  ))}
+                  )}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Fournisseur
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ville
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Disjoncteurs
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {current.map(s => (
-                  <tr key={s.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">{s.user}</td>
-                    <td className="px-6 py-4">{s.supplier}</td>
-                    <td className="px-6 py-4">{s.city}</td>
-                    <td className="px-6 py-4 space-x-3">
-                      {/* Nouveau bouton "Voir disjoncteurs" */}
-                      <button 
-                        onClick={() => navigate(`/subscribers/${s.id}/disjoncteurs`)} 
-                        className="text-blue-600 hover:underline"
-                      >
-                        Voir disjoncteurs
-                      </button>
-                      
-                      <button 
-                        onClick={() => navigate(`/subscribers/edit/${s.id}`)} 
-                        className="text-indigo-600 hover:underline"
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(s.id)} 
-                        className="text-red-600 hover:underline"
-                      >
-                        Remove
-                      </button>
+                  <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                    {!isAbonne && (
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <FiMail className="h-5 w-5 mr-2 text-indigo-500" />
+                          <span className="text-sm text-gray-900">{s.user}</span>
+                        </div>
+                      </td>
+                    )}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <FiHome className="h-5 w-5 mr-2 text-indigo-500" />
+                        <span className="text-sm text-gray-900">{s.supplier}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <FiMapPin className="h-5 w-5 mr-2 text-indigo-500" />
+                        <span className="text-sm text-gray-900">{s.city}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {s.breakers.slice(0, 3).map(b => (
+                          <div 
+                            key={b.id}
+                            className={`px-2 py-1 rounded-full flex items-center ${
+                              b.current_state === 'ON' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                            title={`${b.nom} (${b.libelle}) - ${b.voltage}V`}
+                          >
+                            <FiZap className="mr-1" />
+                            <span className="text-xs">{b.nom}</span>
+                          </div>
+                        ))}
+                        {s.breakers.length > 3 && (
+                          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full flex items-center">
+                            <FiZap className="mr-1" />
+                            +{s.breakers.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        <button 
+                          onClick={() => navigate(`/subscribers/${s.id}/disjoncteurs`)} 
+                          className="text-blue-600 hover:text-blue-800 flex items-center transition-colors"
+                        >
+                          <FiEye className="mr-1" /> Détails
+                        </button>
+                        
+                        {showEditButton && (
+                          <button 
+                            onClick={() => navigate(`/subscribers/edit/${s.id}`)} 
+                            className="text-indigo-600 hover:text-indigo-800 flex items-center transition-colors"
+                          >
+                            <FiEdit2 className="mr-1" /> Modifier
+                          </button>
+                        )}
+                        
+                        {showDeleteButton && (
+                          <button 
+                            onClick={() => handleDelete(s.id)} 
+                            className="text-red-600 hover:text-red-800 flex items-center transition-colors"
+                          >
+                            <FiTrash2 className="mr-1" /> Supprimer
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {current.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No Subscriber Found</td>
+                    <td 
+                      colSpan={isAbonne ? 4 : 5} 
+                      className="px-6 py-4 text-center text-sm text-gray-500"
+                    >
+                      {isAbonne ? "Aucune donnée d'abonnement trouvée" : "Aucun abonné trouvé"}
+                    </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center space-x-2 mt-4">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 rounded bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
-              >
-                Previous
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
+          {!isAbonne && totalPages > 1 && (
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between px-6 py-3 bg-gray-50 gap-4">
+              <div className="text-sm text-gray-700">
+                Page <span className="font-medium">{currentPage}</span> sur <span className="font-medium">{totalPages}</span>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-2">
                 <button
-                  key={i + 1}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-gray-50'}`}
+                  onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1 rounded-md flex items-center ${
+                    currentPage === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                  }`}
                 >
-                  {i + 1}
+                  <FiChevronLeft className="mr-1" /> Précédent
                 </button>
-              ))}
-              <button
-                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 rounded bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
-              >
-                Next
-              </button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 rounded-md ${
+                      currentPage === page
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-1 rounded-md flex items-center ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                  }`}
+                >
+                  Suivant <FiChevronRight className="ml-1" />
+                </button>
+              </div>
             </div>
           )}
         </>

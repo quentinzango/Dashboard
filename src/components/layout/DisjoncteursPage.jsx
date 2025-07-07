@@ -20,7 +20,6 @@ const DisjoncteursPage = () => {
     abonne: id
   });
 
-  // Récupérer les données initiales
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -28,8 +27,7 @@ const DisjoncteursPage = () => {
         setError(null);
         const token = localStorage.getItem('accessToken');
         
-        // Récupérer les informations de l'abonné
-        const abonneRes = await fetch(`https://www.emkit.site/api/v1/abonnes/${id}/`, {
+        const abonneRes = await fetch(`http://localhost:8000/api/v1/abonnes/${id}/`, {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -44,8 +42,7 @@ const DisjoncteursPage = () => {
         const abonneData = await abonneRes.json();
         setAbonneInfo(abonneData);
 
-        // Récupérer les disjoncteurs de l'abonné
-        const disjoncteursRes = await fetch(`https://www.emkit.site/api/v1/disjoncteurs/?abonne=${id}`, {
+        const disjoncteursRes = await fetch(`http://localhost:8000/api/v1/disjoncteurs/?abonne=${id}`, {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -58,11 +55,9 @@ const DisjoncteursPage = () => {
         }
         
         const disjoncteursData = await disjoncteursRes.json();
-        console.log("Disjoncteurs reçus:", disjoncteursData); // Debug
         setDisjoncteurs(disjoncteursData);
 
-        // Récupérer les types d'équipement
-        const typesRes = await fetch('https://www.emkit.site/api/v1/typeequipements/', {
+        const typesRes = await fetch('http://localhost:8000/api/v1/typeequipements/', {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -88,13 +83,11 @@ const DisjoncteursPage = () => {
     fetchData();
   }, [id]);
 
-  // Gestion du formulaire
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Ouvrir le modal pour ajouter ou modifier
   const openModal = (disjoncteur = null) => {
     if (disjoncteur) {
       setCurrentDisjoncteur(disjoncteur);
@@ -119,14 +112,12 @@ const DisjoncteursPage = () => {
     setError(null);
   };
 
-  // Fermer le modal
   const closeModal = () => {
     setIsModalOpen(false);
     setCurrentDisjoncteur(null);
     setError(null);
   };
 
-  // Soumettre le formulaire (création ou mise à jour)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -135,10 +126,9 @@ const DisjoncteursPage = () => {
     const token = localStorage.getItem('accessToken');
     const method = currentDisjoncteur ? 'PUT' : 'POST';
     const url = currentDisjoncteur 
-      ? `https://www.emkit.site/api/v1/disjoncteurs/${currentDisjoncteur.id}/`
-      : 'https://www.emkit.site/api/v1/disjoncteurs/';
+      ? `http://localhost:8000/api/v1/disjoncteurs/${currentDisjoncteur.id}/`
+      : 'http://localhost:8000/api/v1/disjoncteurs/';
     
-    // Préparer les données avec les bons types
     const payload = {
       ...formData,
       voltage: parseFloat(formData.voltage),
@@ -163,11 +153,9 @@ const DisjoncteursPage = () => {
         
         let errorMessage = 'Échec de l\'opération';
         if (responseData && typeof responseData === 'object') {
-          // Gestion des erreurs de validation Django
           const errors = Object.entries(responseData)
             .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
             .join('\n');
-          
           errorMessage = errors;
         } else if (responseData?.detail) {
           errorMessage = responseData.detail;
@@ -176,8 +164,7 @@ const DisjoncteursPage = () => {
         throw new Error(errorMessage);
       }
 
-      // Recharger les données
-      const disjoncteursRes = await fetch(`https://www.emkit.site/api/v1/disjoncteurs/?abonne=${id}`, {
+      const disjoncteursRes = await fetch(`http://localhost:8000/api/v1/disjoncteurs/?abonne=${id}`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -190,7 +177,6 @@ const DisjoncteursPage = () => {
       }
       
       const disjoncteursData = await disjoncteursRes.json();
-      console.log("Disjoncteurs après mise à jour:", disjoncteursData);
       setDisjoncteurs(disjoncteursData);
       
       closeModal();
@@ -202,13 +188,12 @@ const DisjoncteursPage = () => {
     }
   };
 
-  // Supprimer un disjoncteur
   const handleDelete = async (disjoncteurId) => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce disjoncteur ?')) return;
     
     const token = localStorage.getItem('accessToken');
     try {
-      const response = await fetch(`https://www.emkit.site/api/v1/disjoncteurs/${disjoncteurId}/`, {
+      const response = await fetch(`http://localhost:8000/api/v1/disjoncteurs/${disjoncteurId}/`, {
         method: 'DELETE',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -221,7 +206,6 @@ const DisjoncteursPage = () => {
         throw new Error(`Échec suppression [${response.status}]: ${errorText}`);
       }
 
-      // Mettre à jour l'état local
       setDisjoncteurs(prev => prev.filter(d => d.id !== disjoncteurId));
     } catch (e) {
       console.error("Erreur suppression:", e);
@@ -229,13 +213,12 @@ const DisjoncteursPage = () => {
     }
   };
 
-  // Changer l'état d'un disjoncteur
   const toggleState = async (disjoncteur) => {
     const token = localStorage.getItem('accessToken');
     const newState = disjoncteur.current_state === 'ON' ? 'OFF' : 'ON';
     
     try {
-      const response = await fetch(`https://www.emkit.site/api/v1/disjoncteurs/${disjoncteur.id}/control/`, {
+      const response = await fetch(`http://localhost:8000/api/v1/disjoncteurs/${disjoncteur.id}/control/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -249,7 +232,6 @@ const DisjoncteursPage = () => {
         throw new Error(`Échec changement état [${response.status}]: ${errorText}`);
       }
 
-      // Mettre à jour l'état local
       setDisjoncteurs(prev => 
         prev.map(d => 
           d.id === disjoncteur.id 
@@ -294,7 +276,6 @@ const DisjoncteursPage = () => {
         </div>
       </div>
 
-      {/* Message d'erreur global */}
       {error && (
         <div className="mb-6 p-4 bg-red-100 text-red-700 rounded">
           {error}
@@ -371,7 +352,6 @@ const DisjoncteursPage = () => {
         )}
       </div>
 
-      {/* Modal pour ajouter/modifier */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-md">
